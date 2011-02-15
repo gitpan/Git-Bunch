@@ -1,0 +1,160 @@
+NAME
+    Git::Bunch - Manage gitbunch directory (directory which contain git
+    repos)
+
+VERSION
+    version 0.01
+
+SYNOPSIS
+    To check the status of bunch (will do a 'git status' for each git repo
+    inside the bunch and report which repos are 'unclean', e.g. needs
+    commit, has untracked files, etc):
+
+     % gitbunch check ~/repos
+
+    To synchronize bunch to another (will do a 'git pull' for each git repo,
+    and do an rsync for everything else):
+
+     % gitbunch sync ~/repos /mnt/laptop/repos
+
+    To backup bunch (will only rsync .git/ for each git repo to destination,
+    and rsync everything else in full):
+
+     % gitbunch backup ~/repos /media/flashdisk
+
+DESCRIPTION
+    A gitbunch or bunch directory is just a term I coined to refer to a
+    directory which contains, well, a bunch of git repositories. It can also
+    contain other stuffs like files and non-git repositories (but they must
+    be dot-dirs). Example:
+
+     repos/            -> a gitbunch dir
+       proj1/          -> a git repo
+       proj2/          -> ditto
+       perl-Git-Bunch/ -> ditto
+       ...
+       .foo/           -> a non-git dir
+       README.txt      -> file
+
+    A little bit of history: after git got popular, in 2008 I started using
+    it for software projects, replacing Subversion and Bazaar. Soon, I moved
+    everything to git: notes & writings, Emacs .org agenda files,
+    configuration, even temporary downloads/browser-saved HTML files.
+    Currently, except large media files, all my personal data resides in git
+    repositories. I put them all in ~/repos (and add symlinks to various
+    places for convenience). This setup makes it easy to sync to laptops,
+    backup to disk, etc. Git::Bunch is the library/script I wrote to do
+    this.
+
+    See also File::RsyBak, which I wrote to backup everything else.
+
+FUNCTIONS
+    None of the functions are exported by default, but they are exportable.
+
+  backup_bunch(%args) -> RESP
+    Backup bunch directory to another directory using rsync.
+
+    Simply uses rsync to copy bunch directory to another, except that for
+    all git projects, only .git/ will be rsync-ed. This utilizes the fact
+    that .git/ contains the whole project's data, the working copy can be
+    checked out from .git/.
+
+    Will run check_bunch first and require all repos to be clean before
+    running the backup, unless 'check' is turned off.
+
+    Note: Saving only .git/ subdirectory saves disk space, but will not save
+    uncommited changes, untracked files, or .gitignore'd files. Make sure
+    you have committed everything to git before doing backup. Also note that
+    if you need to restore files, they will be checked out from the
+    repository, and the original ctime/mtime information is not preserved.
+    backup_bunch() does store this information for you by saving the output
+    of 'ls -laR' command, but have *not* implemented routine to restore this
+    data into restored files.
+
+    Arguments ("*" denotes required arguments):
+
+    *   source* => *str*
+
+        Directory to backup.
+
+    *   target* => *str*
+
+        Backup destination.
+
+    *   backup => *bool* (default 1)
+
+        Whether to do actual backup/rsync.
+
+        You can set backup=0 and index=1 to only run indexing, for example.
+
+    *   check => *bool* (default 1)
+
+        Whether to check bunch first before doing backup.
+
+    *   extra_rsync_opts => *array*
+
+        Pass extra options to rsync command.
+
+        Extra options to pass to rsync command. Note that the options will
+        be shell quoted, , so you should pass it unquoted, e.g.
+        ['--exclude', '/Program Files'].
+
+    *   index => *bool* (default 1)
+
+        Whether to do "ls -laR" after backup.
+
+  check_bunch(%args) -> RESP
+    Check status of git repositories inside gitbunch directory.
+
+    Will perform a 'git status' for each git repositories inside the bunch
+    and report which repositories are 'unclean' (e.g. needs commit, has
+    untracked files, etc).
+
+    Arguments ("*" denotes required arguments):
+
+    *   source* => *str*
+
+        Directory to check.
+
+  sync_bunch(%args) -> RESP
+    Synchronize bunch to another bunch.
+
+    For each git repository in the bunch, will perform a 'git pull' from the
+    destination for each branch. If repository in destination doesn't exist,
+    it will be rsync-ed first from source. When 'git pull' fails, will exit
+    to let you fix the problem manually.
+
+    For all other non-git repos, will simply synchronize by one-way rsync.
+
+    Arguments ("*" denotes required arguments):
+
+    *   source* => *str*
+
+        Source bunch.
+
+    *   target* => *str*
+
+        Destination bunch.
+
+    *   delete_branch => *bool* (default 0)
+
+        Whether to delete branches in dest repos not existing in source
+        repos.
+
+    *   repos => *array*
+
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
+
+FAQ
+TODO
+SEE ALSO
+AUTHOR
+    Steven Haryanto <stevenharyanto@gmail.com>
+
+COPYRIGHT AND LICENSE
+    This software is copyright (c) 2011 by Steven Haryanto.
+
+    This is free software; you can redistribute it and/or modify it under
+    the same terms as the Perl 5 programming language system itself.
+
