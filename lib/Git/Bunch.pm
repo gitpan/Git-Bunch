@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.01';
+  $Git::Bunch::VERSION = '0.02';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -186,8 +186,8 @@ sub _sync_repo {
             return [500, "git pull branch $branch failed: $1"];
         } elsif ($exit == 0 &&
                      $output =~ /^Updating |^Merge made by recursive/m) {
-            $log->info("  Branch $branch updated") if @src_branches > 1;
-            $log->info("  Repo $repo updated"    ) if @src_branches == 1;
+            $log->warn("Branch $branch updated") if @src_branches > 1;
+            $log->warn("Repo $repo updated"    ) if @src_branches == 1;
         } else {
             $log->error("Can't recognize 'git pull' output for ".
                             "branch $branch: exit=$exit, output=$output");
@@ -316,7 +316,7 @@ sub sync_bunch {
             if ($?) {
                 $log->warn("Rsync failed, please check: $!");
             }
-            $log->info("  Repo $e copied");
+            $log->warn("Repo $e copied");
             next ENTRY;
         } else {
             $log->info("Sync-ing repo $e ...");
@@ -476,7 +476,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.01
+version 0.02
 
 =head1 SYNOPSIS
 
