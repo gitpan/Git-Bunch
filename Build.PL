@@ -17,12 +17,13 @@ my %module_build_args = (
     'Steven Haryanto <stevenharyanto@gmail.com>'
   ],
   'dist_name' => 'Git-Bunch',
-  'dist_version' => '0.02',
+  'dist_version' => '0.03',
   'license' => 'perl',
   'module_name' => 'Git::Bunch',
   'recommends' => {},
   'recursive_test_files' => 1,
   'requires' => {
+    'File::chdir' => '0',
     'Log::Any' => '0',
     'Log::Any::App' => '0',
     'String::ShellQuote' => '0',
