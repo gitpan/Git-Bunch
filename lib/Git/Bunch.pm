@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.04';
+  $Git::Bunch::VERSION = '0.05';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -18,9 +18,9 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch);
 
-our %SUBS;
+our %SPEC;
 
-$SUBS{check_bunch} = {
+$SPEC{check_bunch} = {
     summary       =>
         'Check status of git repositories inside gitbunch directory',
     description   => <<'_',
@@ -223,7 +223,7 @@ sub _sync_repo {
     [200, "OK"];
 }
 
-$SUBS{sync_bunch} = {
+$SPEC{sync_bunch} = {
     summary       =>
         'Synchronize bunch to another bunch',
     description   => <<'_',
@@ -331,7 +331,7 @@ sub sync_bunch {
     [200, "OK", {failed_syncs=>\%res}];
 }
 
-$SUBS{backup_bunch} = {
+$SPEC{backup_bunch} = {
     summary       =>
         'Backup bunch directory to another directory using rsync',
     description   => <<'_',
@@ -476,7 +476,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.04
+version 0.05
 
 =head1 SYNOPSIS
 
@@ -526,7 +526,7 @@ See also L<File::RsyBak>, which I wrote to backup everything else.
 
 None of the functions are exported by default, but they are exportable.
 
-=head2 backup_bunch(%args) -> RESP
+=head2 backup_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
 
 
 Backup bunch directory to another directory using rsync.
@@ -546,6 +546,10 @@ restore files, they will be checked out from the repository, and the original
 ctime/mtime information is not preserved. backup_bunch() does store this
 information for you by saving the output of 'ls -laR' command, but have *not*
 implemented routine to restore this data into restored files.
+
+Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERRMSG is a string containing error
+message, RESULT is the actual result.
 
 Arguments (C<*> denotes required arguments):
 
@@ -582,7 +586,7 @@ Whether to do "ls -laR" after backup.
 
 =back
 
-=head2 check_bunch(%args) -> RESP
+=head2 check_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
 
 
 Check status of git repositories inside gitbunch directory.
@@ -590,6 +594,10 @@ Check status of git repositories inside gitbunch directory.
 Will perform a 'git status' for each git repositories inside the bunch and
 report which repositories are 'unclean' (e.g. needs commit, has untracked files,
 etc).
+
+Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERRMSG is a string containing error
+message, RESULT is the actual result.
 
 Arguments (C<*> denotes required arguments):
 
@@ -601,7 +609,7 @@ Directory to check.
 
 =back
 
-=head2 sync_bunch(%args) -> RESP
+=head2 sync_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
 
 
 Synchronize bunch to another bunch.
@@ -612,6 +620,10 @@ be rsync-ed first from source. When 'git pull' fails, will exit to let you fix
 the problem manually.
 
 For all other non-git repos, will simply synchronize by one-way rsync.
+
+Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERRMSG is a string containing error
+message, RESULT is the actual result.
 
 Arguments (C<*> denotes required arguments):
 

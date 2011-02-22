@@ -18,9 +18,9 @@ requires:
   Log::Any: 0
   Log::Any::App: 0
   String::ShellQuote: 0
-  Sub::Spec::CmdLine: 0.08
+  Sub::Spec::CmdLine: 0.22
   perl: 5.010000
 resources:
   homepage: http://search.cpan.org/dist/Git-Bunch/
   repository: http://github.com/sharyanto/perl-Git-Bunch
-version: 0.04
+version: 0.05

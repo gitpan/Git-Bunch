@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.04
+    version 0.05
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -51,7 +51,7 @@ DESCRIPTION
 FUNCTIONS
     None of the functions are exported by default, but they are exportable.
 
-  backup_bunch(%args) -> RESP
+  backup_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
     Backup bunch directory to another directory using rsync.
 
     Simply uses rsync to copy bunch directory to another, except that for
@@ -70,6 +70,10 @@ FUNCTIONS
     backup_bunch() does store this information for you by saving the output
     of 'ls -laR' command, but have *not* implemented routine to restore this
     data into restored files.
+
+    Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error
+    code between 3xx-5xx (just like in HTTP). ERRMSG is a string containing
+    error message, RESULT is the actual result.
 
     Arguments ("*" denotes required arguments):
 
@@ -103,12 +107,16 @@ FUNCTIONS
 
         Whether to do "ls -laR" after backup.
 
-  check_bunch(%args) -> RESP
+  check_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
     Check status of git repositories inside gitbunch directory.
 
     Will perform a 'git status' for each git repositories inside the bunch
     and report which repositories are 'unclean' (e.g. needs commit, has
     untracked files, etc).
+
+    Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error
+    code between 3xx-5xx (just like in HTTP). ERRMSG is a string containing
+    error message, RESULT is the actual result.
 
     Arguments ("*" denotes required arguments):
 
@@ -116,7 +124,7 @@ FUNCTIONS
 
         Directory to check.
 
-  sync_bunch(%args) -> RESP
+  sync_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
     Synchronize bunch to another bunch.
 
     For each git repository in the bunch, will perform a 'git pull' from the
@@ -125,6 +133,10 @@ FUNCTIONS
     to let you fix the problem manually.
 
     For all other non-git repos, will simply synchronize by one-way rsync.
+
+    Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error
+    code between 3xx-5xx (just like in HTTP). ERRMSG is a string containing
+    error message, RESULT is the actual result.
 
     Arguments ("*" denotes required arguments):
 
