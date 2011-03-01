@@ -7,20 +7,23 @@ build_requires:
 configure_requires:
   Module::Build: 0.3601
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 4.200003, CPAN::Meta::Converter version 2.102400'
+generated_by: 'Dist::Zilla version 4.200000, CPAN::Meta::Converter version 2.102400'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
 name: Git-Bunch
 requires:
+  File::Slurp::Shortcuts: 0
+  File::Which: 0
   File::chdir: 0
   Log::Any: 0
   Log::Any::App: 0
   String::ShellQuote: 0
-  Sub::Spec::CmdLine: 0.22
+  Sub::Spec::CmdLine: 0.25
+  autodie: 0
   perl: 5.010000
 resources:
   homepage: http://search.cpan.org/dist/Git-Bunch/
   repository: http://github.com/sharyanto/perl-Git-Bunch
-version: 0.05
+version: 0.06

@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.05
+    version 0.06
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -111,8 +111,9 @@ FUNCTIONS
     Check status of git repositories inside gitbunch directory.
 
     Will perform a 'git status' for each git repositories inside the bunch
-    and report which repositories are 'unclean' (e.g. needs commit, has
-    untracked files, etc).
+    and report which repositories are clean/unclean.
+
+    Will die if can't chdir into bunch or git repository.
 
     Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error
     code between 3xx-5xx (just like in HTTP). ERRMSG is a string containing

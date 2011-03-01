@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.05';
+  $Git::Bunch::VERSION = '0.06';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -20,17 +20,31 @@ our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch);
 
 our %SPEC;
 
+sub _check_bunch_sanity {
+    my ($path_ref, $title, $must_exist) = @_;
+    $title //= "Directory";
+    $$path_ref =~ s!/+$!!;
+    if ($must_exist // 1) {
+        (-d $$path_ref) or return [404, "$title doesn't exist"];
+    }
+    (-d $$path_ref . "/.git") and
+        return [400, "$title is probably a git repo, ".
+                    "you should specify a dir *containing* ".
+                        "git repos instead"];
+    [200, "OK"];
+}
+
 $SPEC{check_bunch} = {
     summary       =>
         'Check status of git repositories inside gitbunch directory',
     description   => <<'_',
 
 Will perform a 'git status' for each git repositories inside the bunch and
-report which repositories are 'unclean' (e.g. needs commit, has untracked files,
-etc).
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
 
 _
-    required_args => [qw/source/],
     args          => {
         source           => ['str*'   => {
             summary      => 'Directory to check',
@@ -38,32 +52,45 @@ _
         }],
     },
     cmdline_suppress_output => 1,
+    deps => {
+        all => [
+            {exec => 'git'},
+        ],
+    },
 };
 sub check_bunch {
     my %args = @_;
     my $source = $args{source} or return [400, "Please specify source"];
-    $source =~ s!/+$!!;
-    (-d $source) or return [404, "Source doesn't exist"];
+    my $res = _check_bunch_sanity(\$source, 'Source');
+    return $res unless $res->[0] == 200;
 
     $log->info("Checking bunch $source ...");
 
+    my $has_unclean;
     my %res;
     local $CWD = $source;
+    my $i = 0;
     for my $repo (grep {-d} <*>) {
-        $CWD = $repo;
+        $CWD = $i++ ? "../$repo" : $repo;
         $log->debug("Checking repo $repo ...");
 
         unless (-d ".git") {
             $log->warn("$repo is not a git repo, ".
                            "please remove it or rename to .$repo");
             $res{$repo} = [400, "Not a git repository"];
+            next;
         };
 
         my $output = `LANG=C git status 2>&1`;
         my $exit = $? & 255;
         if ($exit == 0 && $output =~ /nothing to commit/) {
             $log->info("$repo is clean");
-        } elsif ($exit == 0 &&
+            $res{$repo} = [200, "Clean"];
+            next;
+        }
+
+        $has_unclean++;
+        if ($exit == 0 &&
                      $output =~ /Changes to be committed|Changed but/) {
             $log->warn("$repo needs commit");
             $res{$repo} = [500, "Needs commit"];
@@ -78,13 +105,12 @@ sub check_bunch {
                             "for repo $repo: exit=$exit, output=$output");
             $res{$repo} = [500, "Unknown (exit=$exit, output=$output)"];
         }
-        $CWD = "..";
     }
-    [200, "OK", \%res];
+    [200, $has_unclean ? "Some repos unclean" : "All repos clean", \%res];
 }
 
 sub _mysystem {
-    $log->trace("system(): ".join(" ", @_));
+    $log->tracef("system(): cwd=%s, cmd=%s", $CWD, join(" ", @_));
     system @_;
 }
 
@@ -155,6 +181,7 @@ sub _sync_repo {
 
     my $output;
     my $lock_deleted;
+    my $changed_branch;
   BRANCH:
     for my $branch (@src_branches) {
         # XXX we should allow fetching tags only even if head is the same, but
@@ -164,6 +191,7 @@ sub _sync_repo {
             $log->debug("Skipping branch $branch because heads are the same");
             next BRANCH;
         }
+        $changed_branch++;
         if (0 && !$lock_deleted++) {
             $log->debug("Deleting locks first ...");
             unlink "$src/$repo/.git/index.lock";
@@ -210,6 +238,7 @@ sub _sync_repo {
         for my $branch (@dest_branches) {
             next if $branch ~~ @src_branches;
             next if $branch eq 'master'; # can't delete master branch
+            $changed_branch++;
             $log->info("Deleting branch $branch because it no longer exists ".
                            "in src ...");
             _mysystem("cd '$dest/$repo' && git checkout master 2>/dev/null && ".
@@ -220,7 +249,11 @@ sub _sync_repo {
         }
     }
 
-    [200, "OK"];
+    if ($changed_branch) {
+        return [200, "OK"];
+    } else {
+        return [304, "Not modified"];
+    }
 }
 
 $SPEC{sync_bunch} = {
@@ -236,7 +269,6 @@ the problem manually.
 For all other non-git repos, will simply synchronize by one-way rsync.
 
 _
-    required_args => [qw/source target/],
     args          => {
         source           => ['str*'   => {
             summary      => 'Source bunch',
@@ -258,18 +290,26 @@ _
         }],
     },
     cmdline_suppress_output => 1,
+    deps => {
+        all => [
+            {exec => 'git'},
+            {exec => 'rsync'},
+        ],
+    },
 };
 sub sync_bunch {
     my %args = @_;
 
+    my $res;
+
     # XXX schema
     my $source        = $args{source} or return [400, "Please specify source"];
     $source           =~ s!/+$!!;
-    (-d $source) or return [404, "Source doesn't exist"];
-    $source           = Cwd::abs_path($source);
+    $res = _check_bunch_sanity(\$source, 'Source');
+    return $res unless $res->[0] == 200;
     my $target        = $args{target} or return [400, "Please specify target"];
-    $target           =~ s!/+$!!;
-    $target           = Cwd::abs_path($target);
+    $res = _check_bunch_sanity(\$target, 'Target', 0);
+    return $res unless $res->[0] == 200;
     my $wanted_repos  = $args{repos};
     return [400, "repos must be an array"]
         if defined($wanted_repos) && ref($wanted_repos) ne 'ARRAY';
@@ -277,35 +317,40 @@ sub sync_bunch {
 
     my $cmd;
 
-    local $CWD = $source;
-    my @entries;
-    opendir my($d), "."; @entries = readdir($d);
-
     unless (-d $target) {
         $log->debugf("Creating target directory %s ...", $target);
         make_path($target)
             or return [500, "Can't create target directory $target: $!"];
     }
+    $target = Cwd::abs_path($target);
 
-    $CWD = $target;
+    my @entries;
+    opendir my($d), $source; @entries = readdir($d);
+
+    $source = Cwd::abs_path($source);
+    local $CWD = $target;
     my %res;
   ENTRY:
     for my $e (@entries) {
         next if $e eq '.' || $e eq '..';
+
+        if ($wanted_repos && !($e ~~ @$wanted_repos)) {
+            $log->debugf("Repo $e is not in wanted repos (%s), skipped",
+                         $wanted_repos);
+            next ENTRY;
+        }
+
         my $is_repo = (-d "$source/$e") && (-d "$source/$e/.git");
         if (!$is_repo) {
             $log->info("Sync-ing non-git file/directory $e ...");
             $cmd = "rsync -az --del --force ".shell_quote("$source/$e")." .";
             _mysystem($cmd);
             if ($?) {
-                $log->warn("Rsync failed, please check: $!");
+                $log->warn("Rsync failed, please check: $?");
+                $res{$e} = [500, "rsync failed: $?"];
+            } else {
+                $res{$e} = [200, "rsync-ed"];
             }
-            next ENTRY;
-        }
-
-        if ($wanted_repos && !($e ~~ @$wanted_repos)) {
-            $log->debugf("Repo $e is not in wanted repos (%s), skipped",
-                         $wanted_repos);
             next ENTRY;
         }
 
@@ -314,7 +359,10 @@ sub sync_bunch {
             $cmd = "rsync -az ".shell_quote("$source/$e")." .";
             _mysystem($cmd);
             if ($?) {
-                $log->warn("Rsync failed, please check: $!");
+                $log->warn("Rsync failed, please check: $?");
+                $res{$e} = [500, "rsync failed: $?"];
+            } else {
+                $res{$e} = [200, "rsync-ed"];
             }
             $log->warn("Repo $e copied");
             next ENTRY;
@@ -324,11 +372,11 @@ sub sync_bunch {
                 $source, $target, $e,
                 {delete_branch => $delete_branch},
             );
-            $res{$e} = $res if $res->[0] != 200;
+            $res{$e} = $res;
         }
     }
 
-    [200, "OK", {failed_syncs=>\%res}];
+    [200, "OK", \%res];
 }
 
 $SPEC{backup_bunch} = {
@@ -353,7 +401,6 @@ information for you by saving the output of 'ls -laR' command, but have *not*
 implemented routine to restore this data into restored files.
 
 _
-    required_args => [qw/source target/],
     args          => {
         source           => ['str*'   => {
             summary      => 'Directory to backup',
@@ -405,26 +452,35 @@ directories will be backed up in its entirety. Do not run check_bunch() first.
 _
         },
     ],
+    deps => {
+        all => [
+            {exec => 'ls'},
+            {exec => 'gzip'},
+            {exec => 'rsync'},
+        ],
+    },
 };
 sub backup_bunch {
     my %args = @_;
 
+    my $res;
+
     # XXX schema
     my $source    = $args{source} or return [400, "Please specify source"];
-    $source =~ s!/+$!!;
-    (-d $source) or return [404, "Source doesn't exist"];
+    $res = _check_bunch_sanity(\$source, 'Source');
+    return $res unless $res->[0] == 200;
     my $target    = $args{target} or return [400, "Please specify target"];
-    $target       =~ s!/+$!!;
+    $res = _check_bunch_sanity(\$target, 'Target', 0);
+    return $res unless $res->[0] == 200;
     my $check     = $args{check}  // 1;
     my $backup    = $args{backup} // 1;
     my $index     = $args{index}  // 1;
 
-    my $res;
     if ($check) {
         $res = check_bunch(source => $source);
         return $res unless $res->[0];
         return [500, "Some repos are not clean, please fix first"]
-            if keys %{$res->[2]};
+            if grep { $res->[2]{$_}[0] != 200 } keys %{$res->[2]};
     }
 
     unless (-d $target) {
@@ -450,16 +506,21 @@ sub backup_bunch {
             shell_quote($target), "/"
         );
         _mysystem($cmd);
-        return [500, "Backup did not succeed, please check: $!"] if $?;
+        return [500, "Backup did not succeed, please check: $?"] if $?;
     }
 
     if ($index) {
         $log->info("Indexing bunch $source ...");
-        local $CWD = $source;
-        my $cmd = "( ls -laR | gzip -c > .ls-laR.gz ) && ".
-            "cp .ls-laR.gz ".shell_quote($target);
+        {
+            local $CWD = $source;
+            my $cmd = "ls -laR | gzip -c > .ls-laR.gz";
+            _mysystem($cmd);
+            return [500, "Indexing did not succeed, please check: $?"] if $?;
+        }
+        my $cmd = "rsync ".shell_quote("$source/.ls-laR.gz")." ".
+            shell_quote("$target/");
         _mysystem($cmd);
-        return [500, "Indexing did not succeed, please check: $!"] if $?;
+        return [500, "Copying index did not succeed, please check: $?"] if $?;
     }
 
     [200, "OK"];
@@ -476,7 +537,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.05
+version 0.06
 
 =head1 SYNOPSIS
 
@@ -592,8 +653,9 @@ Whether to do "ls -laR" after backup.
 Check status of git repositories inside gitbunch directory.
 
 Will perform a 'git status' for each git repositories inside the bunch and
-report which repositories are 'unclean' (e.g. needs commit, has untracked files,
-etc).
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
 
 Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error code
 between 3xx-5xx (just like in HTTP). ERRMSG is a string containing error
