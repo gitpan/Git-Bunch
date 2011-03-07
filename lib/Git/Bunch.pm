@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.06';
+  $Git::Bunch::VERSION = '0.07';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -70,7 +70,7 @@ sub check_bunch {
     my %res;
     local $CWD = $source;
     my $i = 0;
-    for my $repo (grep {-d} <*>) {
+    for my $repo (sort grep {-d} <*>) {
         $CWD = $i++ ? "../$repo" : $repo;
         $log->debug("Checking repo $repo ...");
 
@@ -331,7 +331,7 @@ sub sync_bunch {
     local $CWD = $target;
     my %res;
   ENTRY:
-    for my $e (@entries) {
+    for my $e (sort @entries) {
         next if $e eq '.' || $e eq '..';
 
         if ($wanted_repos && !($e ~~ @$wanted_repos)) {
@@ -493,8 +493,11 @@ sub backup_bunch {
         $log->info("Backing up bunch $source ===> $target ...");
         my $cmd = join(
             "",
-            "rsync -az ",
+            "rsync ",
+            ($args{extra_rsync_opts} ? map { shell_quote($_), " " }
+                 @{$args{extra_rsync_opts}} : ()),
             ($log->is_trace() ? "-Pv" : ($log->is_debug() ? "-v" : "")), " ",
+            "-az ",
             "--include / ",
             # dot-dirs are included recursively
             "--include '/.??*' --include '/.??*/**' ",
@@ -537,7 +540,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.06
+version 0.07
 
 =head1 SYNOPSIS
 

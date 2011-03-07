@@ -26,4 +26,4 @@ requires:
 resources:
   homepage: http://search.cpan.org/dist/Git-Bunch/
   repository: http://github.com/sharyanto/perl-Git-Bunch
-version: 0.06
+version: 0.07
