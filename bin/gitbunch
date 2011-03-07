@@ -3,7 +3,7 @@
 # workaround for dzil
 package gitbunch;
 BEGIN {
-  $gitbunch::VERSION = '0.07';
+  $gitbunch::VERSION = '0.08';
 }
 
 use 5.010;
@@ -39,7 +39,7 @@ gitbunch
 
 =head1 VERSION
 
-version 0.07
+version 0.08
 
 =head1 DESCRIPTION
 
