@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.08';
+  $Git::Bunch::VERSION = '0.09';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -197,7 +197,8 @@ sub _sync_repo {
             unlink "$src/$repo/.git/index.lock";
             unlink "$dest/$repo/.git/index.lock";
         }
-        $log->info("Updating branch $branch ...") if @src_branches > 1;
+        $log->info("Updating branch $branch of repo $repo ...")
+            if @src_branches > 1;
         $output = _myqx(
             join("",
                  "cd '$dest/$repo'; ",
@@ -207,28 +208,30 @@ sub _sync_repo {
              ));
         $exit = $? & 255;
         if ($exit == 0 && $output =~ /Already up-to-date/) {
-            $log->debug("Branch `$branch is up to date");
+            $log->debug("Branch $branch of repo $repo is up to date");
             next BRANCH;
         } elsif ($output =~ /^error: (.+)/m) {
             $log->error("Can't successfully git pull branch $branch: $1");
             return [500, "git pull branch $branch failed: $1"];
         } elsif ($exit == 0 &&
                      $output =~ /^Updating |^Merge made by recursive/m) {
-            $log->warn("Branch $branch updated") if @src_branches > 1;
-            $log->warn("Repo $repo updated"    ) if @src_branches == 1;
+            $log->warn("Branch $branch of repo $repo updated")
+                if @src_branches > 1;
+            $log->warn("Repo $repo updated")
+                if @src_branches == 1;
         } else {
             $log->error("Can't recognize 'git pull' output for ".
                             "branch $branch: exit=$exit, output=$output");
             return [500, "Can't recognize git pull output: $output"];
         }
-        $log->debug("Result of 'git pull' for branch $branch: ".
+        $log->debug("Result of 'git pull' for branch $branch of repo $repo: ".
                         "exit=$exit, output=$output");
 
         $output = _myqx("cd '$dest/$repo'; ".
                             "LANG=C git fetch --tags '$src/$repo' 2>&1");
         $exit = $? & 255;
         if ($exit != 0) {
-            $log->debug("Can't successfully fetch --tags: ".
+            $log->debug("Failed fetching tags: ".
                             "$output (exit=$exit)");
             return [500, "git fetch --tags failed: $1"];
         }
@@ -239,12 +242,12 @@ sub _sync_repo {
             next if $branch ~~ @src_branches;
             next if $branch eq 'master'; # can't delete master branch
             $changed_branch++;
-            $log->info("Deleting branch $branch because it no longer exists ".
-                           "in src ...");
+            $log->info("Deleting branch $branch of repo $repo because ".
+                           "it no longer exists in src ...");
             _mysystem("cd '$dest/$repo' && git checkout master 2>/dev/null && ".
                           "git branch -D '$branch' 2>/dev/null");
             if (($? & 255) != 0) {
-                $log->error("Can't successfully delete branch $branch: $?");
+                $log->error("Failed deleting branch $branch of repo $repo: $?");
             }
         }
     }
@@ -283,6 +286,10 @@ _
             summary      => 'Specific git repos to sync, if not specified '.
                 'all repos in the bunch will be processed',
         }],
+        exclude_repos    => [array    => {
+            of           => 'str*',
+            summary      => 'Exclude some repos from processing',
+        }],
         delete_branch    => ['bool'   => {
             summary      => 'Whether to delete branches in dest repos '.
                 'not existing in source repos',
@@ -313,6 +320,9 @@ sub sync_bunch {
     my $wanted_repos  = $args{repos};
     return [400, "repos must be an array"]
         if defined($wanted_repos) && ref($wanted_repos) ne 'ARRAY';
+    my $exclude_repos = $args{exclude_repos};
+    return [400, "exclude_repos must be an array"]
+        if defined($exclude_repos) && ref($exclude_repos) ne 'ARRAY';
     my $delete_branch = $args{delete_branch} // 0;
 
     my $cmd;
@@ -337,6 +347,11 @@ sub sync_bunch {
         if ($wanted_repos && !($e ~~ @$wanted_repos)) {
             $log->debugf("Repo $e is not in wanted repos (%s), skipped",
                          $wanted_repos);
+            next ENTRY;
+        }
+        if ($exclude_repos && $e ~~ @$exclude_repos) {
+            $log->debugf("Repo $e is in exclude_repos (%s), skipped",
+                         $exclude_repos);
             next ENTRY;
         }
 
@@ -540,7 +555,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.08
+version 0.09
 
 =head1 SYNOPSIS
 
@@ -590,7 +605,7 @@ See also L<File::RsyBak>, which I wrote to backup everything else.
 
 None of the functions are exported by default, but they are exportable.
 
-=head2 backup_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
+=head2 backup_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
 
 
 Backup bunch directory to another directory using rsync.
@@ -611,8 +626,8 @@ ctime/mtime information is not preserved. backup_bunch() does store this
 information for you by saving the output of 'ls -laR' command, but have *not*
 implemented routine to restore this data into restored files.
 
-Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERRMSG is a string containing error
+Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
 message, RESULT is the actual result.
 
 Arguments (C<*> denotes required arguments):
@@ -650,7 +665,7 @@ Whether to do "ls -laR" after backup.
 
 =back
 
-=head2 check_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
+=head2 check_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
 
 
 Check status of git repositories inside gitbunch directory.
@@ -660,8 +675,8 @@ report which repositories are clean/unclean.
 
 Will die if can't chdir into bunch or git repository.
 
-Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERRMSG is a string containing error
+Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
 message, RESULT is the actual result.
 
 Arguments (C<*> denotes required arguments):
@@ -674,7 +689,7 @@ Directory to check.
 
 =back
 
-=head2 sync_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
+=head2 sync_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
 
 
 Synchronize bunch to another bunch.
@@ -686,8 +701,8 @@ the problem manually.
 
 For all other non-git repos, will simply synchronize by one-way rsync.
 
-Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERRMSG is a string containing error
+Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
 message, RESULT is the actual result.
 
 Arguments (C<*> denotes required arguments):
@@ -705,6 +720,10 @@ Destination bunch.
 =item * B<delete_branch> => I<bool> (default C<0>)
 
 Whether to delete branches in dest repos not existing in source repos.
+
+=item * B<exclude_repos> => I<array>
+
+Exclude some repos from processing.
 
 =item * B<repos> => I<array>
 

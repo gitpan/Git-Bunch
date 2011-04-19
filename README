@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.08
+    version 0.09
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -51,7 +51,7 @@ DESCRIPTION
 FUNCTIONS
     None of the functions are exported by default, but they are exportable.
 
-  backup_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
+  backup_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
     Backup bunch directory to another directory using rsync.
 
     Simply uses rsync to copy bunch directory to another, except that for
@@ -71,8 +71,8 @@ FUNCTIONS
     of 'ls -laR' command, but have *not* implemented routine to restore this
     data into restored files.
 
-    Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error
-    code between 3xx-5xx (just like in HTTP). ERRMSG is a string containing
+    Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error
+    code between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing
     error message, RESULT is the actual result.
 
     Arguments ("*" denotes required arguments):
@@ -107,7 +107,7 @@ FUNCTIONS
 
         Whether to do "ls -laR" after backup.
 
-  check_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
+  check_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
     Check status of git repositories inside gitbunch directory.
 
     Will perform a 'git status' for each git repositories inside the bunch
@@ -115,8 +115,8 @@ FUNCTIONS
 
     Will die if can't chdir into bunch or git repository.
 
-    Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error
-    code between 3xx-5xx (just like in HTTP). ERRMSG is a string containing
+    Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error
+    code between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing
     error message, RESULT is the actual result.
 
     Arguments ("*" denotes required arguments):
@@ -125,7 +125,7 @@ FUNCTIONS
 
         Directory to check.
 
-  sync_bunch(%args) -> [STATUSCODE, ERRMSG, RESULT]
+  sync_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
     Synchronize bunch to another bunch.
 
     For each git repository in the bunch, will perform a 'git pull' from the
@@ -135,8 +135,8 @@ FUNCTIONS
 
     For all other non-git repos, will simply synchronize by one-way rsync.
 
-    Returns a 3-element arrayref. STATUSCODE is 200 on success, or an error
-    code between 3xx-5xx (just like in HTTP). ERRMSG is a string containing
+    Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error
+    code between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing
     error message, RESULT is the actual result.
 
     Arguments ("*" denotes required arguments):
@@ -153,6 +153,10 @@ FUNCTIONS
 
         Whether to delete branches in dest repos not existing in source
         repos.
+
+    *   exclude_repos => *array*
+
+        Exclude some repos from processing.
 
     *   repos => *array*
 

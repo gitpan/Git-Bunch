@@ -120,17 +120,17 @@ test_gb(
     },
 );
 
-subtest "can't chdir to repo -> dies" => sub {
-    plan skip_all => "skipping test for root because root can still cd to dir ".
-        "with mode 0000" unless $>;
-    test_gb(
-        sub     => "check_bunch",
-        name    => "can't chdir to repo -> dies",
-        args    => {source=>"src/bunch1"},
-        dies    => 1,
-    );
-    rmdir "src/bunch1/repo3";
-};
+#subtest "can't chdir to repo -> dies" => sub {
+#    plan skip_all => "skipping test because user can access src/bunch1 "
+#        if -x "src/bunch1";
+#    test_gb(
+#        sub     => "check_bunch",
+#        name    => "can't chdir to repo -> dies",
+#        args    => {source=>"src/bunch1"},
+#        dies    => 1,
+#    );
+#    rmdir "src/bunch1/repo3";
+#};
 
 SKIP: {
     for (qw(ls gzip)) {
@@ -305,6 +305,7 @@ TODO: {
     local $TODO = "todo";
     fail("arg: delete_branch");
     fail("arg: repos (skips nonrepo as well as repo)");
+    fail("sync tags");
 }
 
 delete_test_data("sync") if Test::More->builder->is_passing;
