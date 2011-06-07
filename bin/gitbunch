@@ -3,7 +3,7 @@
 # workaround for dzil
 package gitbunch;
 BEGIN {
-  $gitbunch::VERSION = '0.09';
+  $gitbunch::VERSION = '0.10';
 }
 
 use 5.010;
@@ -26,6 +26,7 @@ run(
         check  => { sub => 'check_bunch'  },
         sync   => { sub => 'sync_bunch'   },
         backup => { sub => 'backup_bunch' },
+        exec   => { sub => 'exec_bunch'   },
     }
 );
 
@@ -39,7 +40,7 @@ gitbunch
 
 =head1 VERSION
 
-version 0.09
+version 0.10
 
 =head1 DESCRIPTION
 

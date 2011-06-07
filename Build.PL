@@ -17,7 +17,7 @@ my %module_build_args = (
     'Steven Haryanto <stevenharyanto@gmail.com>'
   ],
   'dist_name' => 'Git-Bunch',
-  'dist_version' => '0.09',
+  'dist_version' => '0.10',
   'license' => 'perl',
   'module_name' => 'Git::Bunch',
   'recommends' => {},
@@ -29,6 +29,7 @@ my %module_build_args = (
     'Log::Any' => '0',
     'Log::Any::App' => '0',
     'String::ShellQuote' => '0',
+    'Sub::Spec' => '0.13',
     'Sub::Spec::CmdLine' => '0.25',
     'autodie' => '0',
     'perl' => '5.010000'

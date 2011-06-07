@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.09';
+  $Git::Bunch::VERSION = '0.10';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -16,9 +16,121 @@ use String::ShellQuote;
 
 require Exporter;
 our @ISA       = qw(Exporter);
-our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch);
+our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
 our %SPEC;
+
+our %common_args_spec = (
+    source           => ['str*'   => {
+        summary      => 'Directory to check',
+        arg_pos      => 0,
+    }],
+    include_repos    => ['array'   => {
+        of           => 'str*',
+        summary      => 'Specific git repos to sync, if not specified '.
+            'all repos in the bunch will be processed',
+        arg_aliases  => {
+            repos => {},
+        },
+    }],
+    include_repos_pat=> ['str' => {
+        summary      => 'Specify regex pattern of repos to include',
+    }],
+    exclude_repos    => [array    => {
+        of           => 'str*',
+        summary      => 'Exclude some repos from processing',
+    }],
+    exclude_repos_pat=> ['str' => {
+        summary      => 'Specify regex pattern of repos to exclude',
+    }],
+);
+
+our %target_arg_spec = (
+    target           => ['str*'   => {
+        summary      => 'Destination bunch',
+        arg_pos      => 1,
+    }],
+);
+
+sub _check_common_args {
+    my ($args, $requires_target) = @_;
+    my $res;
+
+    $args->{source} or return [400, "Please specify source"];
+    $args->{source} =~ s!/+$!!;
+    $res = _check_bunch_sanity(\$args->{source}, 'Source');
+    return $res unless $res->[0] == 200;
+
+    my $ir = $args->{include_repos};
+    return [400, "include_repos must be an array"]
+        if defined($ir) && ref($ir) ne 'ARRAY';
+    my $irp = $args->{include_repos_pat};
+    if (defined $irp) {
+        return [400, "Invalid include_repos_pat: must be a string"]
+            if ref($irp);
+        return [400, "Invalid include_repos_pat: $@"]
+            if !(eval q{qr/$irp/});
+    }
+    my $er = $args->{exclude_repos};
+    return [400, "exclude_repos must be an array"]
+        if defined($er) && ref($er) ne 'ARRAY';
+    my $erp = $args->{exclude_repos_pat};
+    if (defined $erp) {
+        return [400, "Invalid exclude_repos_pat: must be a string"]
+            if ref($erp);
+        return [400, "Invalid exclude_repos_pat: must be a string"]
+            if !(eval q{qr/$erp/});
+    }
+
+    if ($requires_target) {
+        $args->{target} or return [400, "Please specify target"];
+        $res = _check_bunch_sanity(\$args->{target}, 'Target', 0);
+        return $res unless $res->[0] == 200;
+    }
+
+    [200, "OK"];
+}
+
+# return true if entry should be skipped
+sub _skip_process_entry {
+    my ($e, $args, $dir, $skip_non_repo) = @_;
+
+    return 1 if $e eq '.' || $e eq '..';
+
+    if ($skip_non_repo) {
+        unless (-d "$dir/.git") {
+            $log->warn("Skipped $e (not a git repo), ".
+                           "please remove it or rename to .$e");
+            return 1;
+        }
+    }
+    my $ir = $args->{include_repos};
+    if ($ir && !($e ~~ @$ir)) {
+        $log->debug("Skipped $e (not in include_repos)");
+        return 1;
+    }
+    my $irp = $args->{include_repos_pat};
+    if (defined($irp) && $e !~ qr/$irp/) {
+        $log->debug("Skipped $e (not matched include_repos_pat)");
+        return 1;
+    }
+    my $er = $args->{exclude_repos};
+    if ($er && $e ~~ @$er) {
+        $log->debug("Skipped $e (in exclude_repos)");
+        return 1;
+    }
+    my $erp = $args->{exclude_repos_pat};
+    if (defined($erp) && $e =~ qr/$erp/) {
+        $log->debug("Skipped $e (not matched exclude_repos_pat)");
+        return 1;
+    }
+    return;
+}
+
+sub _skip_process_repo {
+    my ($repo, $args, $dir) = @_;
+    _skip_process_entry($repo, $args, $dir, 1);
+}
 
 sub _check_bunch_sanity {
     my ($path_ref, $title, $must_exist) = @_;
@@ -46,10 +158,7 @@ Will die if can't chdir into bunch or git repository.
 
 _
     args          => {
-        source           => ['str*'   => {
-            summary      => 'Directory to check',
-            arg_pos      => 0,
-        }],
+        %common_args_spec,
     },
     cmdline_suppress_output => 1,
     deps => {
@@ -60,9 +169,12 @@ _
 };
 sub check_bunch {
     my %args = @_;
-    my $source = $args{source} or return [400, "Please specify source"];
-    my $res = _check_bunch_sanity(\$source, 'Source');
+    my $res;
+
+    # XXX schema
+    $res = _check_common_args(\%args);
     return $res unless $res->[0] == 200;
+    my $source = $args{source};
 
     $log->info("Checking bunch $source ...");
 
@@ -70,16 +182,12 @@ sub check_bunch {
     my %res;
     local $CWD = $source;
     my $i = 0;
+  REPO:
     for my $repo (sort grep {-d} <*>) {
         $CWD = $i++ ? "../$repo" : $repo;
-        $log->debug("Checking repo $repo ...");
+        next REPO if _skip_process_repo($repo, \%args, ".");
 
-        unless (-d ".git") {
-            $log->warn("$repo is not a git repo, ".
-                           "please remove it or rename to .$repo");
-            $res{$repo} = [400, "Not a git repository"];
-            next;
-        };
+        $log->debug("Checking repo $repo ...");
 
         my $output = `LANG=C git status 2>&1`;
         my $exit = $? & 255;
@@ -91,10 +199,17 @@ sub check_bunch {
 
         $has_unclean++;
         if ($exit == 0 &&
-                     $output =~ /Changes to be committed|Changed but/) {
+                $output =~ /(
+                                Changes \s to \s be \s committed |
+                                Changes \s not \s staged \s for \s commit |
+                                Changed \s but
+                            )/mx) {
             $log->warn("$repo needs commit");
             $res{$repo} = [500, "Needs commit"];
-        } elsif ($exit == 0 && $output =~ /Untracked files/) {
+        } elsif ($exit == 0 &&
+                     $output =~ /(
+                                     Untracked \s files
+                                 )/x) {
             $log->warn("$repo has untracked files");
             $res{$repo} = [500, "Has untracked files"];
         } elsif ($exit == 128 && $output =~ /Not a git repository/) {
@@ -273,23 +388,8 @@ For all other non-git repos, will simply synchronize by one-way rsync.
 
 _
     args          => {
-        source           => ['str*'   => {
-            summary      => 'Source bunch',
-            arg_pos      => 0,
-        }],
-        target           => ['str*'   => {
-            summary      => 'Destination bunch',
-            arg_pos      => 1,
-        }],
-        repos            => ['array'   => {
-            of           => 'str*',
-            summary      => 'Specific git repos to sync, if not specified '.
-                'all repos in the bunch will be processed',
-        }],
-        exclude_repos    => [array    => {
-            of           => 'str*',
-            summary      => 'Exclude some repos from processing',
-        }],
+        %common_args_spec,
+        %target_arg_spec,
         delete_branch    => ['bool'   => {
             summary      => 'Whether to delete branches in dest repos '.
                 'not existing in source repos',
@@ -306,24 +406,14 @@ _
 };
 sub sync_bunch {
     my %args = @_;
-
     my $res;
 
     # XXX schema
-    my $source        = $args{source} or return [400, "Please specify source"];
-    $source           =~ s!/+$!!;
-    $res = _check_bunch_sanity(\$source, 'Source');
+    $res = _check_common_args(\%args, 1);
     return $res unless $res->[0] == 200;
-    my $target        = $args{target} or return [400, "Please specify target"];
-    $res = _check_bunch_sanity(\$target, 'Target', 0);
-    return $res unless $res->[0] == 200;
-    my $wanted_repos  = $args{repos};
-    return [400, "repos must be an array"]
-        if defined($wanted_repos) && ref($wanted_repos) ne 'ARRAY';
-    my $exclude_repos = $args{exclude_repos};
-    return [400, "exclude_repos must be an array"]
-        if defined($exclude_repos) && ref($exclude_repos) ne 'ARRAY';
     my $delete_branch = $args{delete_branch} // 0;
+    my $source = $args{source};
+    my $target = $args{target};
 
     my $cmd;
 
@@ -342,19 +432,7 @@ sub sync_bunch {
     my %res;
   ENTRY:
     for my $e (sort @entries) {
-        next if $e eq '.' || $e eq '..';
-
-        if ($wanted_repos && !($e ~~ @$wanted_repos)) {
-            $log->debugf("Repo $e is not in wanted repos (%s), skipped",
-                         $wanted_repos);
-            next ENTRY;
-        }
-        if ($exclude_repos && $e ~~ @$exclude_repos) {
-            $log->debugf("Repo $e is in exclude_repos (%s), skipped",
-                         $exclude_repos);
-            next ENTRY;
-        }
-
+        next ENTRY if _skip_process_entry($e, \%args, "$source/$e");
         my $is_repo = (-d "$source/$e") && (-d "$source/$e/.git");
         if (!$is_repo) {
             $log->info("Sync-ing non-git file/directory $e ...");
@@ -394,6 +472,57 @@ sub sync_bunch {
     [200, "OK", \%res];
 }
 
+$SPEC{exec_bunch} = {
+    summary       =>
+        'Execute a command for each repo in the bunch',
+    description   => <<'_',
+
+For each git repository in the bunch, will chdir to it and execute specified
+command.
+
+_
+    args          => {
+        %common_args_spec,
+        %target_arg_spec,
+        command   => ['str*'   => {
+            summary      => 'Command to execute',
+            default      => 0,
+            arg_pos      => 2,
+        }],
+    },
+};
+sub exec_bunch {
+    my %args = @_;
+    my $res;
+
+    # XXX schema
+    $res = _check_common_args(\%args);
+    return $res unless $res->[0] == 200;
+    my $source  = $args{source};
+    my $command = $args{command};
+    defined($command) or return [400, "Please specify command"];
+
+    local $CWD = $source;
+    my %res;
+    my $i = 0;
+  REPO:
+    for my $repo (grep {-d} <*>) {
+        $CWD = $i++ ? "../$repo" : $repo;
+        next REPO if _skip_process_repo($repo, \%args, ".");
+        $log->info("Executing command on $repo ...");
+        _mysystem($command);
+        if ($?) {
+            $log->warn("Command failed: $?");
+            $res{$repo} = [500, "Command failed: $?"];
+        } else {
+            $res{$repo} = [200, "Command successful"];
+        }
+        next REPO;
+    }
+
+    [200, "OK", \%res];
+}
+
 $SPEC{backup_bunch} = {
     summary       =>
         'Backup bunch directory to another directory using rsync',
@@ -417,14 +546,8 @@ implemented routine to restore this data into restored files.
 
 _
     args          => {
-        source           => ['str*'   => {
-            summary      => 'Directory to backup',
-            arg_pos      => 0,
-        }],
-        target           => ['str*'   => {
-            summary      => 'Backup destination',
-            arg_pos      => 1,
-        }],
+        %common_args_spec,
+        %target_arg_spec,
         check            => ['bool'   => {
             summary      =>
                 'Whether to check bunch first before doing backup',
@@ -442,6 +565,9 @@ _
         index            => ['bool'   => {
             summary      => 'Whether to do "ls -laR" after backup',
             default      => 1,
+        }],
+        delete_excluded  => [bool    => {
+            summary      => 'Delete excluded repos in target',
         }],
         extra_rsync_opts => [array    => {
             of           => 'str*',
@@ -481,15 +607,14 @@ sub backup_bunch {
     my $res;
 
     # XXX schema
-    my $source    = $args{source} or return [400, "Please specify source"];
-    $res = _check_bunch_sanity(\$source, 'Source');
+    $res = _check_common_args(\%args);
     return $res unless $res->[0] == 200;
-    my $target    = $args{target} or return [400, "Please specify target"];
-    $res = _check_bunch_sanity(\$target, 'Target', 0);
-    return $res unless $res->[0] == 200;
+    my $source    = $args{source};
+    my $target    = $args{target};
     my $check     = $args{check}  // 1;
     my $backup    = $args{backup} // 1;
     my $index     = $args{index}  // 1;
+    my $delete_excluded = $args{delete_excluded};
 
     if ($check) {
         $res = check_bunch(source => $source);
@@ -506,6 +631,26 @@ sub backup_bunch {
 
     if ($backup) {
         $log->info("Backing up bunch $source ===> $target ...");
+
+        my @included_repos;
+        my @files;
+        my @nongit_dirs;
+        my @entries;
+        opendir my($d), $source; @entries = readdir($d);
+      ENTRY:
+        for my $e (@entries) {
+            next ENTRY if _skip_process_entry($e, \%args, "$source/$e");
+            my $is_dir = (-d "$source/$e");
+            my $is_repo = $is_dir && (-d "$source/$e/.git");
+            if ($is_repo) {
+                push @included_repos, $e;
+            } elsif ($is_dir) {
+                push @nongit_dirs, $e;
+            } else {
+                push @files, $e;
+            }
+        }
+
         my $cmd = join(
             "",
             "rsync ",
@@ -514,12 +659,25 @@ sub backup_bunch {
             ($log->is_trace() ? "-Pv" : ($log->is_debug() ? "-v" : "")), " ",
             "-az ",
             "--include / ",
-            # dot-dirs are included recursively
+            # dot-dirs are always included recursively
             "--include '/.??*' --include '/.??*/**' ",
             # nondot-dirs are assumed git as repos, only .git/ copied from each
-            "--include '/*' --include '/*/.git' --include '/*/.git/**' ",
+            (map {
+                (
+                    "--include ", shell_quote("/$_"), " ",
+                    "--include ", shell_quote("/$_/.git"), " ",
+                    "--include ", shell_quote("/$_/.git/**"), " ",
+                )
+            } @included_repos),
+            (map {
+                (
+                    "--include ", shell_quote("/$_"), " ",
+                )
+            } @files, @nongit_dirs),
+            # exclude everything else
             "--exclude '*' ",
-            "--del --force --delete-excluded ",
+            "--del --force ",
+            ($args{delete_excluded} ? "--delete-excluded " : ""),
             shell_quote($source), "/ ",
             shell_quote($target), "/"
         );
@@ -555,7 +713,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.09
+version 0.10
 
 =head1 SYNOPSIS
 
@@ -636,11 +794,11 @@ Arguments (C<*> denotes required arguments):
 
 =item * B<source>* => I<str>
 
-Directory to backup.
+Directory to check.
 
 =item * B<target>* => I<str>
 
-Backup destination.
+Destination bunch.
 
 =item * B<backup> => I<bool> (default C<1>)
 
@@ -652,12 +810,34 @@ You can set backup=0 and index=1 to only run indexing, for example.
 
 Whether to check bunch first before doing backup.
 
+=item * B<delete_excluded> => I<bool>
+
+Delete excluded repos in target.
+
+=item * B<exclude_repos> => I<array>
+
+Exclude some repos from processing.
+
+=item * B<exclude_repos_pat> => I<str>
+
+Specify regex pattern of repos to exclude.
+
 =item * B<extra_rsync_opts> => I<array>
 
 Pass extra options to rsync command.
 
 Extra options to pass to rsync command. Note that the options will be shell
 quoted, , so you should pass it unquoted, e.g. ['--exclude', '/Program Files'].
+
+=item * B<include_repos> => I<array>
+
+Aliases: B<repos>
+
+Specific git repos to sync, if not specified all repos in the bunch will be processed.
+
+=item * B<include_repos_pat> => I<str>
+
+Specify regex pattern of repos to include.
 
 =item * B<index> => I<bool> (default C<1>)
 
@@ -687,6 +867,72 @@ Arguments (C<*> denotes required arguments):
 
 Directory to check.
 
+=item * B<exclude_repos> => I<array>
+
+Exclude some repos from processing.
+
+=item * B<exclude_repos_pat> => I<str>
+
+Specify regex pattern of repos to exclude.
+
+=item * B<include_repos> => I<array>
+
+Aliases: B<repos>
+
+Specific git repos to sync, if not specified all repos in the bunch will be processed.
+
+=item * B<include_repos_pat> => I<str>
+
+Specify regex pattern of repos to include.
+
+=back
+
+=head2 exec_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
+
+
+Execute a command for each repo in the bunch.
+
+For each git repository in the bunch, will chdir to it and execute specified
+command.
+
+Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
+message, RESULT is the actual result.
+
+Arguments (C<*> denotes required arguments):
+
+=over 4
+
+=item * B<source>* => I<str>
+
+Directory to check.
+
+=item * B<target>* => I<str>
+
+Destination bunch.
+
+=item * B<command>* => I<str> (default C<0>)
+
+Command to execute.
+
+=item * B<exclude_repos> => I<array>
+
+Exclude some repos from processing.
+
+=item * B<exclude_repos_pat> => I<str>
+
+Specify regex pattern of repos to exclude.
+
+=item * B<include_repos> => I<array>
+
+Aliases: B<repos>
+
+Specific git repos to sync, if not specified all repos in the bunch will be processed.
+
+=item * B<include_repos_pat> => I<str>
+
+Specify regex pattern of repos to include.
+
 =back
 
 =head2 sync_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
@@ -711,7 +957,7 @@ Arguments (C<*> denotes required arguments):
 
 =item * B<source>* => I<str>
 
-Source bunch.
+Directory to check.
 
 =item * B<target>* => I<str>
 
@@ -725,9 +971,19 @@ Whether to delete branches in dest repos not existing in source repos.
 
 Exclude some repos from processing.
 
-=item * B<repos> => I<array>
+=item * B<exclude_repos_pat> => I<str>
+
+Specify regex pattern of repos to exclude.
+
+=item * B<include_repos> => I<array>
+
+Aliases: B<repos>
 
 Specific git repos to sync, if not specified all repos in the bunch will be processed.
+
+=item * B<include_repos_pat> => I<str>
+
+Specify regex pattern of repos to include.
 
 =back
 

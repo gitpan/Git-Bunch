@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.09
+    version 0.10
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -79,11 +79,11 @@ FUNCTIONS
 
     *   source* => *str*
 
-        Directory to backup.
+        Directory to check.
 
     *   target* => *str*
 
-        Backup destination.
+        Destination bunch.
 
     *   backup => *bool* (default 1)
 
@@ -95,6 +95,18 @@ FUNCTIONS
 
         Whether to check bunch first before doing backup.
 
+    *   delete_excluded => *bool*
+
+        Delete excluded repos in target.
+
+    *   exclude_repos => *array*
+
+        Exclude some repos from processing.
+
+    *   exclude_repos_pat => *str*
+
+        Specify regex pattern of repos to exclude.
+
     *   extra_rsync_opts => *array*
 
         Pass extra options to rsync command.
@@ -102,6 +114,17 @@ FUNCTIONS
         Extra options to pass to rsync command. Note that the options will
         be shell quoted, , so you should pass it unquoted, e.g.
         ['--exclude', '/Program Files'].
+
+    *   include_repos => *array*
+
+        Aliases: repos
+
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
+
+    *   include_repos_pat => *str*
+
+        Specify regex pattern of repos to include.
 
     *   index => *bool* (default 1)
 
@@ -125,6 +148,68 @@ FUNCTIONS
 
         Directory to check.
 
+    *   exclude_repos => *array*
+
+        Exclude some repos from processing.
+
+    *   exclude_repos_pat => *str*
+
+        Specify regex pattern of repos to exclude.
+
+    *   include_repos => *array*
+
+        Aliases: repos
+
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
+
+    *   include_repos_pat => *str*
+
+        Specify regex pattern of repos to include.
+
+  exec_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
+    Execute a command for each repo in the bunch.
+
+    For each git repository in the bunch, will chdir to it and execute
+    specified command.
+
+    Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error
+    code between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing
+    error message, RESULT is the actual result.
+
+    Arguments ("*" denotes required arguments):
+
+    *   source* => *str*
+
+        Directory to check.
+
+    *   target* => *str*
+
+        Destination bunch.
+
+    *   command* => *str* (default 0)
+
+        Command to execute.
+
+    *   exclude_repos => *array*
+
+        Exclude some repos from processing.
+
+    *   exclude_repos_pat => *str*
+
+        Specify regex pattern of repos to exclude.
+
+    *   include_repos => *array*
+
+        Aliases: repos
+
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
+
+    *   include_repos_pat => *str*
+
+        Specify regex pattern of repos to include.
+
   sync_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
     Synchronize bunch to another bunch.
 
@@ -143,7 +228,7 @@ FUNCTIONS
 
     *   source* => *str*
 
-        Source bunch.
+        Directory to check.
 
     *   target* => *str*
 
@@ -158,10 +243,20 @@ FUNCTIONS
 
         Exclude some repos from processing.
 
-    *   repos => *array*
+    *   exclude_repos_pat => *str*
+
+        Specify regex pattern of repos to exclude.
+
+    *   include_repos => *array*
+
+        Aliases: repos
 
         Specific git repos to sync, if not specified all repos in the bunch
         will be processed.
+
+    *   include_repos_pat => *str*
+
+        Specify regex pattern of repos to include.
 
 FAQ
 TODO

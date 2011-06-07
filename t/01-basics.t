@@ -13,6 +13,11 @@ use Git::Bunch qw(check_bunch sync_bunch backup_bunch);
 use Probe::Perl;
 use String::ShellQuote;
 
+# XXX --exclude_repos_pat
+# XXX --include_repos_pat
+# XXX backup: --delete_excluded
+# XXX exec
+
 for (qw(git rsync rm)) {
     plan skip_all => "$_ not available in PATH" unless which($_);
 }
@@ -32,6 +37,7 @@ test_gb(
     status  => 200,
     test_res => sub {
         my ($res) = @_;
+        #diag explain $res;
         is( $res->[2]{repo1}[0], 200, "repo1 is clean");
         is( $res->[2]{repo2}[0], 200, "repo2 is clean");
         ok(!$res->[2]{"file1"}, "file is skipped");
@@ -60,12 +66,12 @@ test_gb(
 mkdir "src/bunch1/nonrepo2";
 test_gb(
     sub     => "check_bunch",
-    name    => "reject nondot, nongit dir",
+    name    => "skip nondot, nongit dir",
     args    => {source=>"src/bunch1"},
     status  => 200,
     test_res => sub {
         my ($res) = @_;
-        is( $res->[2]{nonrepo2}[0], 400, "nonrepo2 is rejected");
+        ok(!$res->[2]{nonrepo2}, "nonrepo2 is skipped");
     },
 );
 rmdir "src/bunch1/nonrepo2";
