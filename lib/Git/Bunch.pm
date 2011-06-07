@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.10';
+  $Git::Bunch::VERSION = '0.11';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -483,11 +483,10 @@ command.
 _
     args          => {
         %common_args_spec,
-        %target_arg_spec,
         command   => ['str*'   => {
             summary      => 'Command to execute',
             default      => 0,
-            arg_pos      => 2,
+            arg_pos      => 1,
         }],
     },
 };
@@ -713,7 +712,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.10
+version 0.11
 
 =head1 SYNOPSIS
 
@@ -906,10 +905,6 @@ Arguments (C<*> denotes required arguments):
 =item * B<source>* => I<str>
 
 Directory to check.
-
-=item * B<target>* => I<str>
-
-Destination bunch.
 
 =item * B<command>* => I<str> (default C<0>)
 

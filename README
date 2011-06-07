@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.10
+    version 0.11
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -182,10 +182,6 @@ FUNCTIONS
     *   source* => *str*
 
         Directory to check.
-
-    *   target* => *str*
-
-        Destination bunch.
 
     *   command* => *str* (default 0)
 
