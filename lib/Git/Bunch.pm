@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.12';
+  $Git::Bunch::VERSION = '0.13';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -39,6 +39,26 @@ our %common_args_spec = (
     exclude_repos    => [array    => {
         of           => 'str*',
         summary      => 'Exclude some repos from processing',
+    }],
+    exclude_non_git_dirs => [bool => {
+        summary      => 'Exclude non-git dirs from processing',
+        description  => <<'_',
+
+This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
+'check_bunch' and 'exec_bunch' already ignore these and only operate on git
+repos.
+
+_
+    }],
+    exclude_files    => [bool => {
+        summary      => 'Exclude files from processing',
+        description  => <<'_',
+
+This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
+'check_bunch' and 'exec_bunch' already ignore these and only operate on git
+repos.
+
+_
     }],
     exclude_repos_pat=> ['str' => {
         summary      => 'Specify regex pattern of repos to exclude',
@@ -96,32 +116,39 @@ sub _skip_process_entry {
     my ($e, $args, $dir, $skip_non_repo) = @_;
 
     return 1 if $e eq '.' || $e eq '..';
+    my $is_repo = (-d $dir) && (-d "$dir/.git");
 
-    if ($skip_non_repo) {
-        unless (-d "$dir/.git") {
-            $log->warn("Skipped $e (not a git repo), ".
-                           "please remove it or rename to .$e");
+    if ($skip_non_repo && !$is_repo) {
+        $log->warn("Skipped $e (not a git repo), ".
+                       "please remove it or rename to .$e");
+        return 1;
+    }
+    if ($is_repo) {
+        my $ir = $args->{include_repos};
+        if ($ir && !($e ~~ @$ir)) {
+            $log->debug("Skipped $e (not in include_repos)");
             return 1;
         }
-    }
-    my $ir = $args->{include_repos};
-    if ($ir && !($e ~~ @$ir)) {
-        $log->debug("Skipped $e (not in include_repos)");
+        my $irp = $args->{include_repos_pat};
+        if (defined($irp) && $e !~ qr/$irp/) {
+            $log->debug("Skipped $e (not matched include_repos_pat)");
+            return 1;
+        }
+        my $er = $args->{exclude_repos};
+        if ($er && $e ~~ @$er) {
+            $log->debug("Skipped $e (in exclude_repos)");
+            return 1;
+        }
+        my $erp = $args->{exclude_repos_pat};
+        if (defined($erp) && $e =~ qr/$erp/) {
+            $log->debug("Skipped $e (not matched exclude_repos_pat)");
+            return 1;
+        }
+    } elsif ((-f $dir) && $args->{exclude_files}) {
+        $log->debug("Skipped $e (exclude_files)");
         return 1;
-    }
-    my $irp = $args->{include_repos_pat};
-    if (defined($irp) && $e !~ qr/$irp/) {
-        $log->debug("Skipped $e (not matched include_repos_pat)");
-        return 1;
-    }
-    my $er = $args->{exclude_repos};
-    if ($er && $e ~~ @$er) {
-        $log->debug("Skipped $e (in exclude_repos)");
-        return 1;
-    }
-    my $erp = $args->{exclude_repos_pat};
-    if (defined($erp) && $e =~ qr/$erp/) {
-        $log->debug("Skipped $e (not matched exclude_repos_pat)");
+    } elsif ((-d $dir) && $args->{exclude_non_git_dirs}) {
+        $log->debug("Skipped $e (exclude_non_git_dirs)");
         return 1;
     }
     return;
@@ -629,28 +656,27 @@ sub backup_bunch {
             or return [500, "Can't create target directory $target: $!"];
     }
 
+    my @included_repos;
+    my @files;
+    my @nongit_dirs;
+    my @entries;
+    opendir my($d), $source; @entries = readdir($d);
+  ENTRY:
+    for my $e (@entries) {
+        next ENTRY if _skip_process_entry($e, \%args, "$source/$e");
+        my $is_dir = (-d "$source/$e");
+        my $is_repo = $is_dir && (-d "$source/$e/.git");
+        if ($is_repo) {
+            push @included_repos, $e;
+        } elsif ($is_dir) {
+            push @nongit_dirs, $e unless $args{exclude_non_git_dirs};
+        } else {
+            push @files, $e unless $args{exclude_files};
+        }
+    }
+
     if ($backup) {
         $log->info("Backing up bunch $source ===> $target ...");
-
-        my @included_repos;
-        my @files;
-        my @nongit_dirs;
-        my @entries;
-        opendir my($d), $source; @entries = readdir($d);
-      ENTRY:
-        for my $e (@entries) {
-            next ENTRY if _skip_process_entry($e, \%args, "$source/$e");
-            my $is_dir = (-d "$source/$e");
-            my $is_repo = $is_dir && (-d "$source/$e/.git");
-            if ($is_repo) {
-                push @included_repos, $e;
-            } elsif ($is_dir) {
-                push @nongit_dirs, $e;
-            } else {
-                push @files, $e;
-            }
-        }
-
         my $cmd = join(
             "",
             "rsync ",
@@ -659,8 +685,6 @@ sub backup_bunch {
             ($log->is_trace() ? "-Pv" : ($log->is_debug() ? "-v" : "")), " ",
             "-az ",
             "--include / ",
-            # dot-dirs are always included recursively
-            "--include '/.??*' --include '/.??*/**' ",
             # nondot-dirs are assumed git as repos, only .git/ copied from each
             (map {
                 (
@@ -673,7 +697,13 @@ sub backup_bunch {
                 (
                     "--include ", shell_quote("/$_"), " ",
                 )
-            } @files, @nongit_dirs),
+            } @files),
+            (map {
+                (
+                    "--include ", shell_quote("/$_"), " ",
+                    "--include ", shell_quote("/$_/**"), " ",
+                )
+            } @nongit_dirs),
             # exclude everything else
             "--exclude '*' ",
             "--del --force ",
@@ -689,7 +719,14 @@ sub backup_bunch {
         $log->info("Indexing bunch $source ...");
         {
             local $CWD = $source;
-            my $cmd = "ls -laR | gzip -c > .ls-laR.gz";
+            my $cmd = join(
+                "",
+                "ls -laR ",
+                join(" ",
+                     map {shell_quote($_)}
+                         @files, @nongit_dirs, @included_repos),
+                " | gzip -c > .ls-laR.gz"
+            );
             _mysystem($cmd);
             return [500, "Indexing did not succeed, please check: $?"] if $?;
         }
@@ -713,7 +750,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.12
+version 0.13
 
 =head1 SYNOPSIS
 
@@ -762,226 +799,6 @@ See also L<File::RsyBak>, which I wrote to backup everything else.
 =head1 FUNCTIONS
 
 None of the functions are exported by default, but they are exportable.
-
-=head2 backup_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-
-
-Backup bunch directory to another directory using rsync.
-
-Simply uses rsync to copy bunch directory to another, except that for all git
-projects, only .git/ will be rsync-ed. This utilizes the fact that .git/
-contains the whole project's data, the working copy can be checked out from
-.git/.
-
-Will run check_bunch first and require all repos to be clean before running the
-backup, unless 'check' is turned off.
-
-Note: Saving only .git/ subdirectory saves disk space, but will not save
-uncommited changes, untracked files, or .gitignore'd files. Make sure you have
-committed everything to git before doing backup. Also note that if you need to
-restore files, they will be checked out from the repository, and the original
-ctime/mtime information is not preserved. backup_bunch() does store this
-information for you by saving the output of 'ls -laR' command, but have *not*
-implemented routine to restore this data into restored files.
-
-Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
-message, RESULT is the actual result.
-
-Arguments (C<*> denotes required arguments):
-
-=over 4
-
-=item * B<source>* => I<str>
-
-Directory to check.
-
-=item * B<target>* => I<str>
-
-Destination bunch.
-
-=item * B<backup> => I<bool> (default C<1>)
-
-Whether to do actual backup/rsync.
-
-You can set backup=0 and index=1 to only run indexing, for example.
-
-=item * B<check> => I<bool> (default C<1>)
-
-Whether to check bunch first before doing backup.
-
-=item * B<delete_excluded> => I<bool>
-
-Delete excluded repos in target.
-
-=item * B<exclude_repos> => I<array>
-
-Exclude some repos from processing.
-
-=item * B<exclude_repos_pat> => I<str>
-
-Specify regex pattern of repos to exclude.
-
-=item * B<extra_rsync_opts> => I<array>
-
-Pass extra options to rsync command.
-
-Extra options to pass to rsync command. Note that the options will be shell
-quoted, , so you should pass it unquoted, e.g. ['--exclude', '/Program Files'].
-
-=item * B<include_repos> => I<array>
-
-Aliases: B<repos>
-
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
-
-=item * B<include_repos_pat> => I<str>
-
-Specify regex pattern of repos to include.
-
-=item * B<index> => I<bool> (default C<1>)
-
-Whether to do "ls -laR" after backup.
-
-=back
-
-=head2 check_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-
-
-Check status of git repositories inside gitbunch directory.
-
-Will perform a 'git status' for each git repositories inside the bunch and
-report which repositories are clean/unclean.
-
-Will die if can't chdir into bunch or git repository.
-
-Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
-message, RESULT is the actual result.
-
-Arguments (C<*> denotes required arguments):
-
-=over 4
-
-=item * B<source>* => I<str>
-
-Directory to check.
-
-=item * B<exclude_repos> => I<array>
-
-Exclude some repos from processing.
-
-=item * B<exclude_repos_pat> => I<str>
-
-Specify regex pattern of repos to exclude.
-
-=item * B<include_repos> => I<array>
-
-Aliases: B<repos>
-
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
-
-=item * B<include_repos_pat> => I<str>
-
-Specify regex pattern of repos to include.
-
-=back
-
-=head2 exec_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-
-
-Execute a command for each repo in the bunch.
-
-For each git repository in the bunch, will chdir to it and execute specified
-command.
-
-Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
-message, RESULT is the actual result.
-
-Arguments (C<*> denotes required arguments):
-
-=over 4
-
-=item * B<source>* => I<str>
-
-Directory to check.
-
-=item * B<command>* => I<str> (default C<0>)
-
-Command to execute.
-
-=item * B<exclude_repos> => I<array>
-
-Exclude some repos from processing.
-
-=item * B<exclude_repos_pat> => I<str>
-
-Specify regex pattern of repos to exclude.
-
-=item * B<include_repos> => I<array>
-
-Aliases: B<repos>
-
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
-
-=item * B<include_repos_pat> => I<str>
-
-Specify regex pattern of repos to include.
-
-=back
-
-=head2 sync_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-
-
-Synchronize bunch to another bunch.
-
-For each git repository in the bunch, will perform a 'git pull' from the
-destination for each branch. If repository in destination doesn't exist, it will
-be rsync-ed first from source. When 'git pull' fails, will exit to let you fix
-the problem manually.
-
-For all other non-git repos, will simply synchronize by one-way rsync.
-
-Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
-message, RESULT is the actual result.
-
-Arguments (C<*> denotes required arguments):
-
-=over 4
-
-=item * B<source>* => I<str>
-
-Directory to check.
-
-=item * B<target>* => I<str>
-
-Destination bunch.
-
-=item * B<delete_branch> => I<bool> (default C<0>)
-
-Whether to delete branches in dest repos not existing in source repos.
-
-=item * B<exclude_repos> => I<array>
-
-Exclude some repos from processing.
-
-=item * B<exclude_repos_pat> => I<str>
-
-Specify regex pattern of repos to exclude.
-
-=item * B<include_repos> => I<array>
-
-Aliases: B<repos>
-
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
-
-=item * B<include_repos_pat> => I<str>
-
-Specify regex pattern of repos to include.
-
-=back
 
 =head1 FAQ
 
