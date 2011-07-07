@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.13';
+  $Git::Bunch::VERSION = '0.14';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -422,6 +422,19 @@ _
                 'not existing in source repos',
             default      => 0,
         }],
+        rsync_opt_maintain_ownership => ['bool' => {
+            summary      => 'Whether or not, when rsync-ing from source, '.
+                'we use -a (= -rlptgoD) or -rlptD (-a minus -go)',
+            description  => <<'_',
+
+Sometimes using -a results in failure to preserve permission modes on
+sshfs-mounted filesystem, while -rlptD succeeds, so by default we don't maintain
+ownership. If you need to maintain ownership (e.g. you run as root and the repos
+are not owned by root), turn this option on.
+
+_
+            default      => 0,
+        }],
     },
     cmdline_suppress_output => 1,
     deps => {
@@ -451,6 +464,8 @@ sub sync_bunch {
     }
     $target = Cwd::abs_path($target);
 
+    my $a = $args{rsync_opt_maintain_ownership} ? "aH" : "rlptDH";
+
     my @entries;
     opendir my($d), $source; @entries = readdir($d);
 
@@ -463,7 +478,7 @@ sub sync_bunch {
         my $is_repo = (-d "$source/$e") && (-d "$source/$e/.git");
         if (!$is_repo) {
             $log->info("Sync-ing non-git file/directory $e ...");
-            $cmd = "rsync -az --del --force ".shell_quote("$source/$e")." .";
+            $cmd = "rsync -${a}z --del --force ".shell_quote("$source/$e")." .";
             _mysystem($cmd);
             if ($?) {
                 $log->warn("Rsync failed, please check: $?");
@@ -476,7 +491,7 @@ sub sync_bunch {
 
         if (!(-e $e)) {
             $log->info("Copying repo $e ...");
-            $cmd = "rsync -az ".shell_quote("$source/$e")." .";
+            $cmd = "rsync -${a}z ".shell_quote("$source/$e")." .";
             _mysystem($cmd);
             if ($?) {
                 $log->warn("Rsync failed, please check: $?");
@@ -750,7 +765,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.13
+version 0.14
 
 =head1 SYNOPSIS
 
@@ -799,6 +814,299 @@ See also L<File::RsyBak>, which I wrote to backup everything else.
 =head1 FUNCTIONS
 
 None of the functions are exported by default, but they are exportable.
+
+=head2 backup_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
+
+
+Backup bunch directory to another directory using rsync.
+
+Simply uses rsync to copy bunch directory to another, except that for all git
+projects, only .git/ will be rsync-ed. This utilizes the fact that .git/
+contains the whole project's data, the working copy can be checked out from
+.git/.
+
+Will run check_bunch first and require all repos to be clean before running the
+backup, unless 'check' is turned off.
+
+Note: Saving only .git/ subdirectory saves disk space, but will not save
+uncommited changes, untracked files, or .gitignore'd files. Make sure you have
+committed everything to git before doing backup. Also note that if you need to
+restore files, they will be checked out from the repository, and the original
+ctime/mtime information is not preserved. backup_bunch() does store this
+information for you by saving the output of 'ls -laR' command, but have *not*
+implemented routine to restore this data into restored files.
+
+Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
+message, RESULT is the actual result.
+
+Arguments (C<*> denotes required arguments):
+
+=over 4
+
+=item * B<source>* => I<str>
+
+Directory to check.
+
+=item * B<target>* => I<str>
+
+Destination bunch.
+
+=item * B<backup> => I<bool> (default C<1>)
+
+Whether to do actual backup/rsync.
+
+You can set backup=0 and index=1 to only run indexing, for example.
+
+=item * B<check> => I<bool> (default C<1>)
+
+Whether to check bunch first before doing backup.
+
+=item * B<delete_excluded> => I<bool>
+
+Delete excluded repos in target.
+
+=item * B<exclude_files> => I<bool>
+
+Exclude files from processing.
+
+This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
+'check_bunch' and 'exec_bunch' already ignore these and only operate on git
+repos.
+
+=item * B<exclude_non_git_dirs> => I<bool>
+
+Exclude non-git dirs from processing.
+
+This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
+'check_bunch' and 'exec_bunch' already ignore these and only operate on git
+repos.
+
+=item * B<exclude_repos> => I<array>
+
+Exclude some repos from processing.
+
+=item * B<exclude_repos_pat> => I<str>
+
+Specify regex pattern of repos to exclude.
+
+=item * B<extra_rsync_opts> => I<array>
+
+Pass extra options to rsync command.
+
+Extra options to pass to rsync command. Note that the options will be shell
+quoted, , so you should pass it unquoted, e.g. ['--exclude', '/Program Files'].
+
+=item * B<include_repos> => I<array>
+
+Aliases: B<repos>
+
+Specific git repos to sync, if not specified all repos in the bunch will be processed.
+
+=item * B<include_repos_pat> => I<str>
+
+Specify regex pattern of repos to include.
+
+=item * B<index> => I<bool> (default C<1>)
+
+Whether to do "ls -laR" after backup.
+
+=back
+
+=head2 check_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
+
+
+Check status of git repositories inside gitbunch directory.
+
+Will perform a 'git status' for each git repositories inside the bunch and
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
+
+Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
+message, RESULT is the actual result.
+
+Arguments (C<*> denotes required arguments):
+
+=over 4
+
+=item * B<source>* => I<str>
+
+Directory to check.
+
+=item * B<exclude_files> => I<bool>
+
+Exclude files from processing.
+
+This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
+'check_bunch' and 'exec_bunch' already ignore these and only operate on git
+repos.
+
+=item * B<exclude_non_git_dirs> => I<bool>
+
+Exclude non-git dirs from processing.
+
+This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
+'check_bunch' and 'exec_bunch' already ignore these and only operate on git
+repos.
+
+=item * B<exclude_repos> => I<array>
+
+Exclude some repos from processing.
+
+=item * B<exclude_repos_pat> => I<str>
+
+Specify regex pattern of repos to exclude.
+
+=item * B<include_repos> => I<array>
+
+Aliases: B<repos>
+
+Specific git repos to sync, if not specified all repos in the bunch will be processed.
+
+=item * B<include_repos_pat> => I<str>
+
+Specify regex pattern of repos to include.
+
+=back
+
+=head2 exec_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
+
+
+Execute a command for each repo in the bunch.
+
+For each git repository in the bunch, will chdir to it and execute specified
+command.
+
+Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
+message, RESULT is the actual result.
+
+Arguments (C<*> denotes required arguments):
+
+=over 4
+
+=item * B<source>* => I<str>
+
+Directory to check.
+
+=item * B<command>* => I<str> (default C<0>)
+
+Command to execute.
+
+=item * B<exclude_files> => I<bool>
+
+Exclude files from processing.
+
+This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
+'check_bunch' and 'exec_bunch' already ignore these and only operate on git
+repos.
+
+=item * B<exclude_non_git_dirs> => I<bool>
+
+Exclude non-git dirs from processing.
+
+This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
+'check_bunch' and 'exec_bunch' already ignore these and only operate on git
+repos.
+
+=item * B<exclude_repos> => I<array>
+
+Exclude some repos from processing.
+
+=item * B<exclude_repos_pat> => I<str>
+
+Specify regex pattern of repos to exclude.
+
+=item * B<include_repos> => I<array>
+
+Aliases: B<repos>
+
+Specific git repos to sync, if not specified all repos in the bunch will be processed.
+
+=item * B<include_repos_pat> => I<str>
+
+Specify regex pattern of repos to include.
+
+=back
+
+=head2 sync_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
+
+
+Synchronize bunch to another bunch.
+
+For each git repository in the bunch, will perform a 'git pull' from the
+destination for each branch. If repository in destination doesn't exist, it will
+be rsync-ed first from source. When 'git pull' fails, will exit to let you fix
+the problem manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
+
+Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
+between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
+message, RESULT is the actual result.
+
+Arguments (C<*> denotes required arguments):
+
+=over 4
+
+=item * B<source>* => I<str>
+
+Directory to check.
+
+=item * B<target>* => I<str>
+
+Destination bunch.
+
+=item * B<delete_branch> => I<bool> (default C<0>)
+
+Whether to delete branches in dest repos not existing in source repos.
+
+=item * B<exclude_files> => I<bool>
+
+Exclude files from processing.
+
+This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
+'check_bunch' and 'exec_bunch' already ignore these and only operate on git
+repos.
+
+=item * B<exclude_non_git_dirs> => I<bool>
+
+Exclude non-git dirs from processing.
+
+This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
+'check_bunch' and 'exec_bunch' already ignore these and only operate on git
+repos.
+
+=item * B<exclude_repos> => I<array>
+
+Exclude some repos from processing.
+
+=item * B<exclude_repos_pat> => I<str>
+
+Specify regex pattern of repos to exclude.
+
+=item * B<include_repos> => I<array>
+
+Aliases: B<repos>
+
+Specific git repos to sync, if not specified all repos in the bunch will be processed.
+
+=item * B<include_repos_pat> => I<str>
+
+Specify regex pattern of repos to include.
+
+=item * B<rsync_opt_maintain_ownership> => I<bool> (default C<0>)
+
+Whether or not, when rsync-ing from source, we use -a (= -rlptgoD) or -rlptD (-a minus -go).
+
+Sometimes using -a results in failure to preserve permission modes on
+sshfs-mounted filesystem, while -rlptD succeeds, so by default we don't maintain
+ownership. If you need to maintain ownership (e.g. you run as root and the repos
+are not owned by root), turn this option on.
+
+=back
 
 =head1 FAQ
 
