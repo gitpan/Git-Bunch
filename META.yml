@@ -21,10 +21,11 @@ requires:
   Log::Any::App: 0
   String::ShellQuote: 0
   Sub::Spec: 0.13
-  Sub::Spec::CmdLine: 0.25
+  Sub::Spec::CmdLine: 0.33
+  Sub::Spec::GetArgs::Array: 0.02
   autodie: 0
   perl: 5.010000
 resources:
   homepage: http://search.cpan.org/dist/Git-Bunch/
   repository: http://github.com/sharyanto/perl-Git-Bunch
-version: 0.14
+version: 0.15

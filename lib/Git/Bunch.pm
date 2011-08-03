@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.14';
+  $Git::Bunch::VERSION = '0.15';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -529,6 +529,7 @@ _
             summary      => 'Command to execute',
             default      => 0,
             arg_pos      => 1,
+            arg_greedy   => 1,
         }],
     },
     cmdline_suppress_output => 1,
@@ -765,7 +766,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.14
+version 0.15
 
 =head1 SYNOPSIS
 
