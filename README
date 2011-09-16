@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.15
+    version 0.16
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -77,74 +77,31 @@ FUNCTIONS
 
     Arguments ("*" denotes required arguments):
 
-    *   source* => *str*
+    *   backup => *bool*
 
-        Directory to check.
-
-    *   target* => *str*
-
-        Destination bunch.
-
-    *   backup => *bool* (default 1)
-
-        Whether to do actual backup/rsync.
-
-        You can set backup=0 and index=1 to only run indexing, for example.
-
-    *   check => *bool* (default 1)
-
-        Whether to check bunch first before doing backup.
+    *   check => *bool*
 
     *   delete_excluded => *bool*
 
-        Delete excluded repos in target.
-
     *   exclude_files => *bool*
-
-        Exclude files from processing.
-
-        This only applies to 'backup_bunch' and 'sync_bunch' operations.
-        Operations like 'check_bunch' and 'exec_bunch' already ignore these
-        and only operate on git repos.
 
     *   exclude_non_git_dirs => *bool*
 
-        Exclude non-git dirs from processing.
-
-        This only applies to 'backup_bunch' and 'sync_bunch' operations.
-        Operations like 'check_bunch' and 'exec_bunch' already ignore these
-        and only operate on git repos.
-
     *   exclude_repos => *array*
-
-        Exclude some repos from processing.
 
     *   exclude_repos_pat => *str*
 
-        Specify regex pattern of repos to exclude.
-
     *   extra_rsync_opts => *array*
-
-        Pass extra options to rsync command.
-
-        Extra options to pass to rsync command. Note that the options will
-        be shell quoted, , so you should pass it unquoted, e.g.
-        ['--exclude', '/Program Files'].
 
     *   include_repos => *array*
 
-        Aliases: repos
-
-        Specific git repos to sync, if not specified all repos in the bunch
-        will be processed.
-
     *   include_repos_pat => *str*
 
-        Specify regex pattern of repos to include.
+    *   index => *bool*
 
-    *   index => *bool* (default 1)
+    *   source => *str*
 
-        Whether to do "ls -laR" after backup.
+    *   target => *str*
 
   check_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
     Check status of git repositories inside gitbunch directory.
@@ -160,44 +117,19 @@ FUNCTIONS
 
     Arguments ("*" denotes required arguments):
 
-    *   source* => *str*
-
-        Directory to check.
-
     *   exclude_files => *bool*
-
-        Exclude files from processing.
-
-        This only applies to 'backup_bunch' and 'sync_bunch' operations.
-        Operations like 'check_bunch' and 'exec_bunch' already ignore these
-        and only operate on git repos.
 
     *   exclude_non_git_dirs => *bool*
 
-        Exclude non-git dirs from processing.
-
-        This only applies to 'backup_bunch' and 'sync_bunch' operations.
-        Operations like 'check_bunch' and 'exec_bunch' already ignore these
-        and only operate on git repos.
-
     *   exclude_repos => *array*
-
-        Exclude some repos from processing.
 
     *   exclude_repos_pat => *str*
 
-        Specify regex pattern of repos to exclude.
-
     *   include_repos => *array*
-
-        Aliases: repos
-
-        Specific git repos to sync, if not specified all repos in the bunch
-        will be processed.
 
     *   include_repos_pat => *str*
 
-        Specify regex pattern of repos to include.
+    *   source => *str*
 
   exec_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
     Execute a command for each repo in the bunch.
@@ -211,48 +143,21 @@ FUNCTIONS
 
     Arguments ("*" denotes required arguments):
 
-    *   source* => *str*
-
-        Directory to check.
-
-    *   command* => *str* (default 0)
-
-        Command to execute.
+    *   command => *str*
 
     *   exclude_files => *bool*
 
-        Exclude files from processing.
-
-        This only applies to 'backup_bunch' and 'sync_bunch' operations.
-        Operations like 'check_bunch' and 'exec_bunch' already ignore these
-        and only operate on git repos.
-
     *   exclude_non_git_dirs => *bool*
-
-        Exclude non-git dirs from processing.
-
-        This only applies to 'backup_bunch' and 'sync_bunch' operations.
-        Operations like 'check_bunch' and 'exec_bunch' already ignore these
-        and only operate on git repos.
 
     *   exclude_repos => *array*
 
-        Exclude some repos from processing.
-
     *   exclude_repos_pat => *str*
-
-        Specify regex pattern of repos to exclude.
 
     *   include_repos => *array*
 
-        Aliases: repos
-
-        Specific git repos to sync, if not specified all repos in the bunch
-        will be processed.
-
     *   include_repos_pat => *str*
 
-        Specify regex pattern of repos to include.
+    *   source => *str*
 
   sync_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
     Synchronize bunch to another bunch.
@@ -270,64 +175,25 @@ FUNCTIONS
 
     Arguments ("*" denotes required arguments):
 
-    *   source* => *str*
-
-        Directory to check.
-
-    *   target* => *str*
-
-        Destination bunch.
-
-    *   delete_branch => *bool* (default 0)
-
-        Whether to delete branches in dest repos not existing in source
-        repos.
+    *   delete_branch => *bool*
 
     *   exclude_files => *bool*
 
-        Exclude files from processing.
-
-        This only applies to 'backup_bunch' and 'sync_bunch' operations.
-        Operations like 'check_bunch' and 'exec_bunch' already ignore these
-        and only operate on git repos.
-
     *   exclude_non_git_dirs => *bool*
-
-        Exclude non-git dirs from processing.
-
-        This only applies to 'backup_bunch' and 'sync_bunch' operations.
-        Operations like 'check_bunch' and 'exec_bunch' already ignore these
-        and only operate on git repos.
 
     *   exclude_repos => *array*
 
-        Exclude some repos from processing.
-
     *   exclude_repos_pat => *str*
-
-        Specify regex pattern of repos to exclude.
 
     *   include_repos => *array*
 
-        Aliases: repos
-
-        Specific git repos to sync, if not specified all repos in the bunch
-        will be processed.
-
     *   include_repos_pat => *str*
 
-        Specify regex pattern of repos to include.
+    *   rsync_opt_maintain_ownership => *bool*
 
-    *   rsync_opt_maintain_ownership => *bool* (default 0)
+    *   source => *str*
 
-        Whether or not, when rsync-ing from source, we use -a (= -rlptgoD)
-        or -rlptD (-a minus -go).
-
-        Sometimes using -a results in failure to preserve permission modes
-        on sshfs-mounted filesystem, while -rlptD succeeds, so by default we
-        don't maintain ownership. If you need to maintain ownership (e.g.
-        you run as root and the repos are not owned by root), turn this
-        option on.
+    *   target => *str*
 
 FAQ
 TODO

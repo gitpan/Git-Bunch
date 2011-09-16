@@ -1,6 +1,6 @@
 package Git::Bunch;
 BEGIN {
-  $Git::Bunch::VERSION = '0.15';
+  $Git::Bunch::VERSION = '0.16';
 }
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
@@ -594,7 +594,7 @@ _
         check            => ['bool'   => {
             summary      =>
                 'Whether to check bunch first before doing backup',
-            default      => 1,
+            default      => 0,
         }],
         backup           => ['bool'   => {
             summary      => 'Whether to do actual backup/rsync',
@@ -654,7 +654,7 @@ sub backup_bunch {
     return $res unless $res->[0] == 200;
     my $source    = $args{source};
     my $target    = $args{target};
-    my $check     = $args{check}  // 1;
+    my $check     = $args{check}  // 0;
     my $backup    = $args{backup} // 1;
     my $index     = $args{index}  // 1;
     my $delete_excluded = $args{delete_excluded};
@@ -766,7 +766,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.15
+version 0.16
 
 =head1 SYNOPSIS
 
@@ -845,72 +845,31 @@ Arguments (C<*> denotes required arguments):
 
 =over 4
 
-=item * B<source>* => I<str>
+=item * B<backup> => I<bool>
 
-Directory to check.
-
-=item * B<target>* => I<str>
-
-Destination bunch.
-
-=item * B<backup> => I<bool> (default C<1>)
-
-Whether to do actual backup/rsync.
-
-You can set backup=0 and index=1 to only run indexing, for example.
-
-=item * B<check> => I<bool> (default C<1>)
-
-Whether to check bunch first before doing backup.
+=item * B<check> => I<bool>
 
 =item * B<delete_excluded> => I<bool>
 
-Delete excluded repos in target.
-
 =item * B<exclude_files> => I<bool>
-
-Exclude files from processing.
-
-This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
-'check_bunch' and 'exec_bunch' already ignore these and only operate on git
-repos.
 
 =item * B<exclude_non_git_dirs> => I<bool>
 
-Exclude non-git dirs from processing.
-
-This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
-'check_bunch' and 'exec_bunch' already ignore these and only operate on git
-repos.
-
 =item * B<exclude_repos> => I<array>
-
-Exclude some repos from processing.
 
 =item * B<exclude_repos_pat> => I<str>
 
-Specify regex pattern of repos to exclude.
-
 =item * B<extra_rsync_opts> => I<array>
-
-Pass extra options to rsync command.
-
-Extra options to pass to rsync command. Note that the options will be shell
-quoted, , so you should pass it unquoted, e.g. ['--exclude', '/Program Files'].
 
 =item * B<include_repos> => I<array>
 
-Aliases: B<repos>
-
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
-
 =item * B<include_repos_pat> => I<str>
 
-Specify regex pattern of repos to include.
+=item * B<index> => I<bool>
 
-=item * B<index> => I<bool> (default C<1>)
+=item * B<source> => I<str>
 
-Whether to do "ls -laR" after backup.
+=item * B<target> => I<str>
 
 =back
 
@@ -932,43 +891,19 @@ Arguments (C<*> denotes required arguments):
 
 =over 4
 
-=item * B<source>* => I<str>
-
-Directory to check.
-
 =item * B<exclude_files> => I<bool>
-
-Exclude files from processing.
-
-This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
-'check_bunch' and 'exec_bunch' already ignore these and only operate on git
-repos.
 
 =item * B<exclude_non_git_dirs> => I<bool>
 
-Exclude non-git dirs from processing.
-
-This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
-'check_bunch' and 'exec_bunch' already ignore these and only operate on git
-repos.
-
 =item * B<exclude_repos> => I<array>
-
-Exclude some repos from processing.
 
 =item * B<exclude_repos_pat> => I<str>
 
-Specify regex pattern of repos to exclude.
-
 =item * B<include_repos> => I<array>
-
-Aliases: B<repos>
-
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
 
 =item * B<include_repos_pat> => I<str>
 
-Specify regex pattern of repos to include.
+=item * B<source> => I<str>
 
 =back
 
@@ -988,47 +923,21 @@ Arguments (C<*> denotes required arguments):
 
 =over 4
 
-=item * B<source>* => I<str>
-
-Directory to check.
-
-=item * B<command>* => I<str> (default C<0>)
-
-Command to execute.
+=item * B<command> => I<str>
 
 =item * B<exclude_files> => I<bool>
 
-Exclude files from processing.
-
-This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
-'check_bunch' and 'exec_bunch' already ignore these and only operate on git
-repos.
-
 =item * B<exclude_non_git_dirs> => I<bool>
-
-Exclude non-git dirs from processing.
-
-This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
-'check_bunch' and 'exec_bunch' already ignore these and only operate on git
-repos.
 
 =item * B<exclude_repos> => I<array>
 
-Exclude some repos from processing.
-
 =item * B<exclude_repos_pat> => I<str>
-
-Specify regex pattern of repos to exclude.
 
 =item * B<include_repos> => I<array>
 
-Aliases: B<repos>
-
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
-
 =item * B<include_repos_pat> => I<str>
 
-Specify regex pattern of repos to include.
+=item * B<source> => I<str>
 
 =back
 
@@ -1052,60 +961,25 @@ Arguments (C<*> denotes required arguments):
 
 =over 4
 
-=item * B<source>* => I<str>
-
-Directory to check.
-
-=item * B<target>* => I<str>
-
-Destination bunch.
-
-=item * B<delete_branch> => I<bool> (default C<0>)
-
-Whether to delete branches in dest repos not existing in source repos.
+=item * B<delete_branch> => I<bool>
 
 =item * B<exclude_files> => I<bool>
 
-Exclude files from processing.
-
-This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
-'check_bunch' and 'exec_bunch' already ignore these and only operate on git
-repos.
-
 =item * B<exclude_non_git_dirs> => I<bool>
-
-Exclude non-git dirs from processing.
-
-This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
-'check_bunch' and 'exec_bunch' already ignore these and only operate on git
-repos.
 
 =item * B<exclude_repos> => I<array>
 
-Exclude some repos from processing.
-
 =item * B<exclude_repos_pat> => I<str>
-
-Specify regex pattern of repos to exclude.
 
 =item * B<include_repos> => I<array>
 
-Aliases: B<repos>
-
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
-
 =item * B<include_repos_pat> => I<str>
 
-Specify regex pattern of repos to include.
+=item * B<rsync_opt_maintain_ownership> => I<bool>
 
-=item * B<rsync_opt_maintain_ownership> => I<bool> (default C<0>)
+=item * B<source> => I<str>
 
-Whether or not, when rsync-ing from source, we use -a (= -rlptgoD) or -rlptD (-a minus -go).
-
-Sometimes using -a results in failure to preserve permission modes on
-sshfs-mounted filesystem, while -rlptD succeeds, so by default we don't maintain
-ownership. If you need to maintain ownership (e.g. you run as root and the repos
-are not owned by root), turn this option on.
+=item * B<target> => I<str>
 
 =back
 
