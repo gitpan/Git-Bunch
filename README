@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.16
+    version 0.17
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -51,150 +51,6 @@ DESCRIPTION
 FUNCTIONS
     None of the functions are exported by default, but they are exportable.
 
-  backup_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-    Backup bunch directory to another directory using rsync.
-
-    Simply uses rsync to copy bunch directory to another, except that for
-    all git projects, only .git/ will be rsync-ed. This utilizes the fact
-    that .git/ contains the whole project's data, the working copy can be
-    checked out from .git/.
-
-    Will run check_bunch first and require all repos to be clean before
-    running the backup, unless 'check' is turned off.
-
-    Note: Saving only .git/ subdirectory saves disk space, but will not save
-    uncommited changes, untracked files, or .gitignore'd files. Make sure
-    you have committed everything to git before doing backup. Also note that
-    if you need to restore files, they will be checked out from the
-    repository, and the original ctime/mtime information is not preserved.
-    backup_bunch() does store this information for you by saving the output
-    of 'ls -laR' command, but have *not* implemented routine to restore this
-    data into restored files.
-
-    Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error
-    code between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing
-    error message, RESULT is the actual result.
-
-    Arguments ("*" denotes required arguments):
-
-    *   backup => *bool*
-
-    *   check => *bool*
-
-    *   delete_excluded => *bool*
-
-    *   exclude_files => *bool*
-
-    *   exclude_non_git_dirs => *bool*
-
-    *   exclude_repos => *array*
-
-    *   exclude_repos_pat => *str*
-
-    *   extra_rsync_opts => *array*
-
-    *   include_repos => *array*
-
-    *   include_repos_pat => *str*
-
-    *   index => *bool*
-
-    *   source => *str*
-
-    *   target => *str*
-
-  check_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-    Check status of git repositories inside gitbunch directory.
-
-    Will perform a 'git status' for each git repositories inside the bunch
-    and report which repositories are clean/unclean.
-
-    Will die if can't chdir into bunch or git repository.
-
-    Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error
-    code between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing
-    error message, RESULT is the actual result.
-
-    Arguments ("*" denotes required arguments):
-
-    *   exclude_files => *bool*
-
-    *   exclude_non_git_dirs => *bool*
-
-    *   exclude_repos => *array*
-
-    *   exclude_repos_pat => *str*
-
-    *   include_repos => *array*
-
-    *   include_repos_pat => *str*
-
-    *   source => *str*
-
-  exec_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-    Execute a command for each repo in the bunch.
-
-    For each git repository in the bunch, will chdir to it and execute
-    specified command.
-
-    Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error
-    code between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing
-    error message, RESULT is the actual result.
-
-    Arguments ("*" denotes required arguments):
-
-    *   command => *str*
-
-    *   exclude_files => *bool*
-
-    *   exclude_non_git_dirs => *bool*
-
-    *   exclude_repos => *array*
-
-    *   exclude_repos_pat => *str*
-
-    *   include_repos => *array*
-
-    *   include_repos_pat => *str*
-
-    *   source => *str*
-
-  sync_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-    Synchronize bunch to another bunch.
-
-    For each git repository in the bunch, will perform a 'git pull' from the
-    destination for each branch. If repository in destination doesn't exist,
-    it will be rsync-ed first from source. When 'git pull' fails, will exit
-    to let you fix the problem manually.
-
-    For all other non-git repos, will simply synchronize by one-way rsync.
-
-    Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error
-    code between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing
-    error message, RESULT is the actual result.
-
-    Arguments ("*" denotes required arguments):
-
-    *   delete_branch => *bool*
-
-    *   exclude_files => *bool*
-
-    *   exclude_non_git_dirs => *bool*
-
-    *   exclude_repos => *array*
-
-    *   exclude_repos_pat => *str*
-
-    *   include_repos => *array*
-
-    *   include_repos_pat => *str*
-
-    *   rsync_opt_maintain_ownership => *bool*
-
-    *   source => *str*
-
-    *   target => *str*
-
 FAQ
 TODO
 SEE ALSO
@@ -202,7 +58,7 @@ AUTHOR
     Steven Haryanto <stevenharyanto@gmail.com>
 
 COPYRIGHT AND LICENSE
-    This software is copyright (c) 2011 by Steven Haryanto.
+    This software is copyright (c) 2012 by Steven Haryanto.
 
     This is free software; you can redistribute it and/or modify it under
     the same terms as the Perl 5 programming language system itself.

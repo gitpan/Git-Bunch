@@ -2,53 +2,42 @@
 
 # workaround for dzil
 package gitbunch;
-BEGIN {
-  $gitbunch::VERSION = '0.16';
-}
 
 use 5.010;
 use strict;
 use warnings;
-BEGIN {
-    # reduce startup overhead if being invoked for bash completion
-    unless ($ENV{COMP_LINE}) {
-        no warnings; $::LOG_LEVEL = 'info';
-        require Log::Any::App;
-        # older Log::Any::App (< 0.26) which croaks when import() is not called
-        Log::Any::App->import();
-    }
-}
 
-use Sub::Spec::CmdLine qw(run);
-run(
-    module => 'Git::Bunch',
+our $VERSION = '0.17'; # VERSION
+
+use Perinci::CmdLine;
+Perinci::CmdLine->new(
+    url => '/Git/Bunch/',
     subcommands => {
-        check  => { sub => 'check_bunch'  },
-        sync   => { sub => 'sync_bunch'   },
-        backup => { sub => 'backup_bunch' },
-        exec   => { sub => 'exec_bunch'   },
+        check  => { url => '/Git/Bunch/check_bunch'  },
+        sync   => { url => '/Git/Bunch/sync_bunch'   },
+        backup => { url => '/Git/Bunch/backup_bunch' },
+        exec   => { url => '/Git/Bunch/exec_bunch'   },
     }
-);
+)->run;
+
+1;
+# ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
 
-
+__END__
 =pod
 
 =head1 NAME
 
-gitbunch
+gitbunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.16
+version 0.17
 
 =head1 DESCRIPTION
 
 See L<Git::Bunch> for more documentation.
-
-=head1 NAME
-
-gitbunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 FAQ
 
@@ -75,13 +64,10 @@ Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Steven Haryanto.
+This software is copyright (c) 2012 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-
-__END__
 

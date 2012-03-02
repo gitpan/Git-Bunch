@@ -1,8 +1,4 @@
 package Git::Bunch;
-BEGIN {
-  $Git::Bunch::VERSION = '0.16';
-}
-# ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
 use 5.010;
 use strict;
@@ -18,12 +14,19 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
+our $VERSION = '0.17'; # VERSION
+
 our %SPEC;
 
 our %common_args_spec = (
     source           => ['str*'   => {
         summary      => 'Directory to check',
         arg_pos      => 0,
+    }],
+    sort             => ['str'   => {
+        summary      => 'Order entries in bunch',
+        in           => [qw/name -name mtime -mtime rand/],
+        default      => '-mtime',
     }],
     include_repos    => ['array'   => {
         of           => 'str*',
@@ -108,7 +111,23 @@ sub _check_common_args {
         return $res unless $res->[0] == 200;
     }
 
-    [200, "OK"];
+    # XXX rand is not proper shuffle
+    my $sort = $args->{sort} // "-mtime";
+    my $sortsub;
+    if (!$sort) {
+        $sortsub = sub { 1 };
+    } elsif ($sort eq '-mtime') {
+        $sortsub = sub {((-M $a)//0) <=> ((-M $b)//0)};
+    } elsif ($sort eq 'mtime') {
+        $sortsub = sub {((-M $b)//0) <=> ((-M $a)//0)};
+    } elsif ($sort eq '-name') {
+        $sortsub = sub {$b cmp $a};
+    } elsif ($sort eq 'name') {
+        $sortsub = sub {$a cmp $b};
+    } else { # rand
+        $sortsub = sub {int(3*rand())-1};
+    }
+    [200, "OK", undef, {sortsub=>$sortsub}];
 }
 
 # return true if entry should be skipped
@@ -187,7 +206,7 @@ _
     args          => {
         %common_args_spec,
     },
-    cmdline_suppress_output => 1,
+    "_cmdline.suppress_output_on_success" => 1,
     deps => {
         all => [
             {exec => 'git'},
@@ -201,6 +220,7 @@ sub check_bunch {
     # XXX schema
     $res = _check_common_args(\%args);
     return $res unless $res->[0] == 200;
+    my $sortsub = $res->[3]{sortsub};
     my $source = $args{source};
 
     $log->info("Checking bunch $source ...");
@@ -210,7 +230,7 @@ sub check_bunch {
     local $CWD = $source;
     my $i = 0;
   REPO:
-    for my $repo (sort grep {-d} <*>) {
+    for my $repo (sort $sortsub grep {-d} <*>) {
         $CWD = $i++ ? "../$repo" : $repo;
         next REPO if _skip_process_repo($repo, \%args, ".");
 
@@ -436,7 +456,7 @@ _
             default      => 0,
         }],
     },
-    cmdline_suppress_output => 1,
+    "_cmdline.suppress_output_on_success" => 1,
     deps => {
         all => [
             {exec => 'git'},
@@ -451,6 +471,7 @@ sub sync_bunch {
     # XXX schema
     $res = _check_common_args(\%args, 1);
     return $res unless $res->[0] == 200;
+    my $sortsub = $res->[3]{sortsub};
     my $delete_branch = $args{delete_branch} // 0;
     my $source = $args{source};
     my $target = $args{target};
@@ -467,13 +488,13 @@ sub sync_bunch {
     my $a = $args{rsync_opt_maintain_ownership} ? "aH" : "rlptDH";
 
     my @entries;
-    opendir my($d), $source; @entries = readdir($d);
+    opendir my($d), $source; @entries = sort $sortsub readdir($d);
 
     $source = Cwd::abs_path($source);
     local $CWD = $target;
     my %res;
   ENTRY:
-    for my $e (sort @entries) {
+    for my $e (sort $sortsub @entries) {
         next ENTRY if _skip_process_entry($e, \%args, "$source/$e");
         my $is_repo = (-d "$source/$e") && (-d "$source/$e/.git");
         if (!$is_repo) {
@@ -532,7 +553,7 @@ _
             arg_greedy   => 1,
         }],
     },
-    cmdline_suppress_output => 1,
+    "_cmdline.suppress_output_on_success" => 1,
 };
 sub exec_bunch {
     my %args = @_;
@@ -541,6 +562,7 @@ sub exec_bunch {
     # XXX schema
     $res = _check_common_args(\%args);
     return $res unless $res->[0] == 200;
+    my $sortsub = $res->[3]{sortsub};
     my $source  = $args{source};
     my $command = $args{command};
     defined($command) or return [400, "Please specify command"];
@@ -549,7 +571,7 @@ sub exec_bunch {
     my %res;
     my $i = 0;
   REPO:
-    for my $repo (grep {-d} <*>) {
+    for my $repo (sort $sortsub grep {-d} <*>) {
         $CWD = $i++ ? "../$repo" : $repo;
         next REPO if _skip_process_repo($repo, \%args, ".");
         $log->info("Executing command on $repo ...");
@@ -756,8 +778,11 @@ sub backup_bunch {
 }
 
 1;
+# ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
 
+
+__END__
 =pod
 
 =head1 NAME
@@ -766,7 +791,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.16
+version 0.17
 
 =head1 SYNOPSIS
 
@@ -816,173 +841,6 @@ See also L<File::RsyBak>, which I wrote to backup everything else.
 
 None of the functions are exported by default, but they are exportable.
 
-=head2 backup_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-
-
-Backup bunch directory to another directory using rsync.
-
-Simply uses rsync to copy bunch directory to another, except that for all git
-projects, only .git/ will be rsync-ed. This utilizes the fact that .git/
-contains the whole project's data, the working copy can be checked out from
-.git/.
-
-Will run check_bunch first and require all repos to be clean before running the
-backup, unless 'check' is turned off.
-
-Note: Saving only .git/ subdirectory saves disk space, but will not save
-uncommited changes, untracked files, or .gitignore'd files. Make sure you have
-committed everything to git before doing backup. Also note that if you need to
-restore files, they will be checked out from the repository, and the original
-ctime/mtime information is not preserved. backup_bunch() does store this
-information for you by saving the output of 'ls -laR' command, but have *not*
-implemented routine to restore this data into restored files.
-
-Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
-message, RESULT is the actual result.
-
-Arguments (C<*> denotes required arguments):
-
-=over 4
-
-=item * B<backup> => I<bool>
-
-=item * B<check> => I<bool>
-
-=item * B<delete_excluded> => I<bool>
-
-=item * B<exclude_files> => I<bool>
-
-=item * B<exclude_non_git_dirs> => I<bool>
-
-=item * B<exclude_repos> => I<array>
-
-=item * B<exclude_repos_pat> => I<str>
-
-=item * B<extra_rsync_opts> => I<array>
-
-=item * B<include_repos> => I<array>
-
-=item * B<include_repos_pat> => I<str>
-
-=item * B<index> => I<bool>
-
-=item * B<source> => I<str>
-
-=item * B<target> => I<str>
-
-=back
-
-=head2 check_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-
-
-Check status of git repositories inside gitbunch directory.
-
-Will perform a 'git status' for each git repositories inside the bunch and
-report which repositories are clean/unclean.
-
-Will die if can't chdir into bunch or git repository.
-
-Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
-message, RESULT is the actual result.
-
-Arguments (C<*> denotes required arguments):
-
-=over 4
-
-=item * B<exclude_files> => I<bool>
-
-=item * B<exclude_non_git_dirs> => I<bool>
-
-=item * B<exclude_repos> => I<array>
-
-=item * B<exclude_repos_pat> => I<str>
-
-=item * B<include_repos> => I<array>
-
-=item * B<include_repos_pat> => I<str>
-
-=item * B<source> => I<str>
-
-=back
-
-=head2 exec_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-
-
-Execute a command for each repo in the bunch.
-
-For each git repository in the bunch, will chdir to it and execute specified
-command.
-
-Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
-message, RESULT is the actual result.
-
-Arguments (C<*> denotes required arguments):
-
-=over 4
-
-=item * B<command> => I<str>
-
-=item * B<exclude_files> => I<bool>
-
-=item * B<exclude_non_git_dirs> => I<bool>
-
-=item * B<exclude_repos> => I<array>
-
-=item * B<exclude_repos_pat> => I<str>
-
-=item * B<include_repos> => I<array>
-
-=item * B<include_repos_pat> => I<str>
-
-=item * B<source> => I<str>
-
-=back
-
-=head2 sync_bunch(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-
-
-Synchronize bunch to another bunch.
-
-For each git repository in the bunch, will perform a 'git pull' from the
-destination for each branch. If repository in destination doesn't exist, it will
-be rsync-ed first from source. When 'git pull' fails, will exit to let you fix
-the problem manually.
-
-For all other non-git repos, will simply synchronize by one-way rsync.
-
-Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
-message, RESULT is the actual result.
-
-Arguments (C<*> denotes required arguments):
-
-=over 4
-
-=item * B<delete_branch> => I<bool>
-
-=item * B<exclude_files> => I<bool>
-
-=item * B<exclude_non_git_dirs> => I<bool>
-
-=item * B<exclude_repos> => I<array>
-
-=item * B<exclude_repos_pat> => I<str>
-
-=item * B<include_repos> => I<array>
-
-=item * B<include_repos_pat> => I<str>
-
-=item * B<rsync_opt_maintain_ownership> => I<bool>
-
-=item * B<source> => I<str>
-
-=item * B<target> => I<str>
-
-=back
-
 =head1 FAQ
 
 =head1 TODO
@@ -995,14 +853,10 @@ Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Steven Haryanto.
+This software is copyright (c) 2012 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-
-__END__
-
 

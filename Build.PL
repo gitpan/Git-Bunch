@@ -6,37 +6,35 @@ use Module::Build 0.3601;
 
 
 my %module_build_args = (
-  'build_requires' => {
-    'Module::Build' => '0.3601'
+  "build_requires" => {
+    "Module::Build" => "0.3601"
   },
-  'configure_requires' => {
-    'Module::Build' => '0.3601'
+  "configure_requires" => {
+    "Module::Build" => "0.3601"
   },
-  'dist_abstract' => 'Manage gitbunch directory (directory which contain git repos)',
-  'dist_author' => [
-    'Steven Haryanto <stevenharyanto@gmail.com>'
+  "dist_abstract" => "Manage gitbunch directory (directory which contain git repos)",
+  "dist_author" => [
+    "Steven Haryanto <stevenharyanto\@gmail.com>"
   ],
-  'dist_name' => 'Git-Bunch',
-  'dist_version' => '0.16',
-  'license' => 'perl',
-  'module_name' => 'Git::Bunch',
-  'recommends' => {},
-  'recursive_test_files' => 1,
-  'requires' => {
-    'File::Slurp::Shortcuts' => '0',
-    'File::Which' => '0',
-    'File::chdir' => '0',
-    'Log::Any' => '0',
-    'Log::Any::App' => '0',
-    'String::ShellQuote' => '0',
-    'Sub::Spec' => '0.13',
-    'Sub::Spec::CmdLine' => '0.33',
-    'Sub::Spec::GetArgs::Array' => '0.02',
-    'autodie' => '0',
-    'perl' => '5.010000'
+  "dist_name" => "Git-Bunch",
+  "dist_version" => "0.17",
+  "license" => "perl",
+  "module_name" => "Git::Bunch",
+  "recommends" => {},
+  "recursive_test_files" => 1,
+  "requires" => {
+    "File::Slurp::Shortcuts" => 0,
+    "File::Which" => 0,
+    "File::chdir" => 0,
+    "Log::Any" => 0,
+    "Log::Any::App" => 0,
+    "Perinci::CmdLine" => 0,
+    "String::ShellQuote" => 0,
+    "autodie" => 0,
+    "perl" => "5.010000"
   },
-  'script_files' => [
-    'bin/gitbunch'
+  "script_files" => [
+    "bin/gitbunch"
   ]
 );
 
