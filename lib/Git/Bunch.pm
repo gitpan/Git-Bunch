@@ -14,7 +14,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
-our $VERSION = '0.17'; # VERSION
+our $VERSION = '0.18'; # VERSION
 
 our %SPEC;
 
@@ -206,7 +206,6 @@ _
     args          => {
         %common_args_spec,
     },
-    "_cmdline.suppress_output_on_success" => 1,
     deps => {
         all => [
             {exec => 'git'},
@@ -268,7 +267,10 @@ sub check_bunch {
             $res{$repo} = [500, "Unknown (exit=$exit, output=$output)"];
         }
     }
-    [200, $has_unclean ? "Some repos unclean" : "All repos clean", \%res];
+    [200,
+     $has_unclean ? "Some repos unclean" : "All repos clean",
+     \%res,
+     {"cmdline.result_importance" => "low"}];
 }
 
 sub _mysystem {
@@ -532,7 +534,10 @@ sub sync_bunch {
         }
     }
 
-    [200, "OK", \%res];
+    [200,
+     "OK",
+     \%res,
+     {"cmdline.result_importance" => "low"}];
 }
 
 $SPEC{exec_bunch} = {
@@ -585,7 +590,10 @@ sub exec_bunch {
         next REPO;
     }
 
-    [200, "OK", \%res];
+    [200,
+     "OK",
+     \%res,
+     {"cmdline.result_importance" => "low"}];
 }
 
 $SPEC{backup_bunch} = {
@@ -791,7 +799,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.17
+version 0.18
 
 =head1 SYNOPSIS
 
