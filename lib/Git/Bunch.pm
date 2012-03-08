@@ -14,9 +14,14 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
-our $VERSION = '0.18'; # VERSION
+our $VERSION = '0.19'; # VERSION
 
 our %SPEC;
+
+$SPEC{":package"} = {
+    v => 1.1,
+    summary => 'Manage gitbunch directory (directory which contain git repos)',
+};
 
 our %common_args_spec = (
     source           => ['str*'   => {
@@ -270,7 +275,7 @@ sub check_bunch {
     [200,
      $has_unclean ? "Some repos unclean" : "All repos clean",
      \%res,
-     {"cmdline.result_importance" => "low"}];
+     {"cmdline.display_result" => 0}];
 }
 
 sub _mysystem {
@@ -378,7 +383,10 @@ sub _sync_repo {
             $log->error("Can't successfully git pull branch $branch: $1");
             return [500, "git pull branch $branch failed: $1"];
         } elsif ($exit == 0 &&
-                     $output =~ /^Updating |^Merge made by recursive/m) {
+                     $output =~ /^Updating \s|
+                                 ^Merge \s made \s by \s recursive|
+                                 ^Merge \s made \s by \s the \s 'recursive'|
+                                /mx) {
             $log->warn("Branch $branch of repo $repo updated")
                 if @src_branches > 1;
             $log->warn("Repo $repo updated")
@@ -537,7 +545,7 @@ sub sync_bunch {
     [200,
      "OK",
      \%res,
-     {"cmdline.result_importance" => "low"}];
+     {"cmdline.display_result" => 0}];
 }
 
 $SPEC{exec_bunch} = {
@@ -593,7 +601,7 @@ sub exec_bunch {
     [200,
      "OK",
      \%res,
-     {"cmdline.result_importance" => "low"}];
+     {"cmdline.display_result" => 0}];
 }
 
 $SPEC{backup_bunch} = {
@@ -799,7 +807,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.18
+version 0.19
 
 =head1 SYNOPSIS
 
