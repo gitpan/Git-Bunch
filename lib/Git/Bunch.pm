@@ -14,7 +14,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
-our $VERSION = '0.20'; # VERSION
+our $VERSION = '0.21'; # VERSION
 
 our %SPEC;
 
@@ -263,6 +263,9 @@ sub check_bunch {
                                  )/x) {
             $log->warn("$repo has untracked files");
             $res{$repo} = [500, "Has untracked files"];
+        } elsif ($exit == 0 && $output =~ /Unmerged paths:/) {
+            $log->warn("$repo needs merging");
+            $res{$repo} = [500, "Needs merging"];
         } elsif ($exit == 128 && $output =~ /Not a git repository/) {
             $log->warn("$repo is not a git repo (2)");
             $res{$repo} = [500, "Not a git repo (2)"];
@@ -809,7 +812,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.20
+version 0.21
 
 =head1 SYNOPSIS
 
