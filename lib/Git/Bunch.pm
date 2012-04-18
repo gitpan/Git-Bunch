@@ -14,7 +14,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
-our $VERSION = '0.19'; # VERSION
+our $VERSION = '0.20'; # VERSION
 
 our %SPEC;
 
@@ -662,9 +662,11 @@ _
         }],
     },
 
-    cmdline_examples => [
+    # this is already metadata v1.1
+    _examples => [
         {
-            cmd         => '/home/steven/repos /backup/steven/repos --nocheck',
+            argv        => [qw(/home/steven/repos /backup/steven/repos
+                               --nocheck)],
             description => <<'_',
 
 Backup /home/steven/repos to /backup/steven/repos. All git projects inside
@@ -807,7 +809,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.19
+version 0.20
 
 =head1 SYNOPSIS
 
