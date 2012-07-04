@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.21
+    version 0.22
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -12,8 +12,8 @@ SYNOPSIS
 
      % gitbunch check ~/repos
 
-    To synchronize bunch to another (will do a 'git pull' for each git repo,
-    and do an rsync for everything else):
+    To synchronize bunch to another (will do a 'git pull/push' for each git
+    repo, and do an rsync for everything else):
 
      % gitbunch sync ~/repos /mnt/laptop/repos
 
@@ -53,6 +53,8 @@ FUNCTIONS
 
 FAQ
 TODO
+    *   Can't handle bare source repos
+
 SEE ALSO
 AUTHOR
     Steven Haryanto <stevenharyanto@gmail.com>

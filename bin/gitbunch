@@ -1,13 +1,10 @@
 #!/usr/bin/perl
 
-# workaround for dzil
-package gitbunch;
-
 use 5.010;
 use strict;
 use warnings;
 
-our $VERSION = '0.21'; # VERSION
+our $VERSION = '0.22'; # VERSION
 
 use Perinci::CmdLine;
 Perinci::CmdLine->new(
@@ -22,6 +19,7 @@ Perinci::CmdLine->new(
 
 1;
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
+# PODNAME: gitbunch
 
 
 __END__
@@ -33,7 +31,7 @@ gitbunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.21
+version 0.22
 
 =head1 DESCRIPTION
 

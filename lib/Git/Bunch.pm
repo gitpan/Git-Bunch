@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Log::Any '$log';
 
+use Builtin::Logged qw(system my_qx);
 use Cwd ();
 use File::chdir;
 use File::Path qw(make_path);
@@ -14,7 +15,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
-our $VERSION = '0.21'; # VERSION
+our $VERSION = '0.22'; # VERSION
 
 our %SPEC;
 
@@ -135,12 +136,22 @@ sub _check_common_args {
     [200, "OK", undef, {sortsub=>$sortsub}];
 }
 
+# return 1 if normal git repo, 2 if bare git repo, 0 if not repo
+sub _is_repo {
+    my $dir = shift;
+
+    return 0 unless (-d $dir);
+    return 1 if (-d "$dir/.git");
+    return 2 if (-d "$dir/branches") && (-f "$dir/HEAD");
+    0;
+}
+
 # return true if entry should be skipped
 sub _skip_process_entry {
     my ($e, $args, $dir, $skip_non_repo) = @_;
 
     return 1 if $e eq '.' || $e eq '..';
-    my $is_repo = (-d $dir) && (-d "$dir/.git");
+    my $is_repo = _is_repo($dir);
 
     if ($skip_non_repo && !$is_repo) {
         $log->warn("Skipped $e (not a git repo), ".
@@ -190,7 +201,7 @@ sub _check_bunch_sanity {
     if ($must_exist // 1) {
         (-d $$path_ref) or return [404, "$title doesn't exist"];
     }
-    (-d $$path_ref . "/.git") and
+    _is_repo($$path_ref) and
         return [400, "$title is probably a git repo, ".
                     "you should specify a dir *containing* ".
                         "git repos instead"];
@@ -213,7 +224,7 @@ _
     },
     deps => {
         all => [
-            {exec => 'git'},
+            {prog => 'git'},
         ],
     },
 };
@@ -281,17 +292,6 @@ sub check_bunch {
      {"cmdline.display_result" => 0}];
 }
 
-sub _mysystem {
-    $log->tracef("system(): cwd=%s, cmd=%s", $CWD, join(" ", @_));
-    system @_;
-}
-
-sub _myqx {
-    my $cmd = shift;
-    $log->trace("qx(): $cmd");
-    `$cmd`
-}
-
 sub _sync_repo {
     my ($src, $dest, $repo, $opts) = @_;
     my $exit;
@@ -302,7 +302,7 @@ sub _sync_repo {
     my %dest_heads; # last revisions for each branch
 
     local $CWD = "$src/$repo";
-    @src_branches = map {(/^[* ] (.+)/, $1)[-1]} _myqx("LANG=C git branch");
+    @src_branches = map {(/^[* ] (.+)/, $1)[-1]} my_qx("LANG=C git branch");
     $exit = $? & 255;
     if ($exit) {
         $log->error("Can't list branches on src repo $src/$repo: $?");
@@ -311,7 +311,7 @@ sub _sync_repo {
     $log->debugf("Source branches: %s", \@src_branches);
 
     for my $branch (@src_branches) {
-        my $output = _myqx("LANG=C git log -1 '$branch'");
+        my $output = my_qx("LANG=C git log -1 '$branch'");
         $exit = $? & 255;
         if ($exit) {
             $log->error("Can't find out head for branch $branch on src repo ".
@@ -328,14 +328,15 @@ sub _sync_repo {
     $log->debugf("Source branch heads: %s", \%src_heads);
 
     $CWD = "$dest/$repo";
-    @dest_branches = map {(/^[* ] (.+)/, $1)[-1]} _myqx("LANG=C git branch");
+    my $is_bare = _is_repo(".") == 2;
+    @dest_branches = map {(/^[* ] (.+)/, $1)[-1]} my_qx("LANG=C git branch");
     if ($exit) {
         $log->error("Can't list branches on dest repo $repo: $?");
         return [500, "Can't list branches on dest: $?"];
     }
     $log->debugf("Dest branches: %s", \@dest_branches);
     for my $branch (@dest_branches) {
-        my $output = _myqx("LANG=C git log -1 '$branch'");
+        my $output = my_qx("LANG=C git log -1 '$branch'");
         $exit = $? & 255;
         if ($exit) {
             $log->error("Can't find out head for branch $branch on dest repo ".
@@ -366,25 +367,33 @@ sub _sync_repo {
         $changed_branch++;
         if (0 && !$lock_deleted++) {
             $log->debug("Deleting locks first ...");
-            unlink "$src/$repo/.git/index.lock";
-            unlink "$dest/$repo/.git/index.lock";
+            unlink "$src/$repo" .($is_bare ? "" : "/.git")."/index.lock";
+            unlink "$dest/$repo".($is_bare ? "" : "/.git")."/index.lock";
         }
         $log->info("Updating branch $branch of repo $repo ...")
             if @src_branches > 1;
-        $output = _myqx(
-            join("",
-                 "cd '$dest/$repo'; ",
-                 ($branch ~~ @dest_branches ? "":"git branch '$branch'; "),
-                 "git checkout '$branch' 2>/dev/null; ",
-                 "LANG=C git pull '$src/$repo' '$branch' 2>&1"
-             ));
+        if ($is_bare) {
+            $output = my_qx(
+                join("",
+                     "cd '$src/$repo'; ",
+                     "LANG=C git push '$dest/$repo' '$branch' 2>&1",
+                 ));
+        } else {
+            $output = my_qx(
+                join("",
+                     "cd '$dest/$repo'; ",
+                     ($branch ~~ @dest_branches ? "":"git branch '$branch'; "),
+                     "git checkout '$branch' 2>/dev/null; ",
+                     "LANG=C git pull '$src/$repo' '$branch' 2>&1"
+                 ));
+        }
         $exit = $? & 255;
         if ($exit == 0 && $output =~ /Already up-to-date/) {
             $log->debug("Branch $branch of repo $repo is up to date");
             next BRANCH;
         } elsif ($output =~ /^error: (.+)/m) {
-            $log->error("Can't successfully git pull branch $branch: $1");
-            return [500, "git pull branch $branch failed: $1"];
+            $log->error("Can't successfully git pull/push branch $branch: $1");
+            return [500, "git pull/push branch $branch failed: $1"];
         } elsif ($exit == 0 &&
                      $output =~ /^Updating \s|
                                  ^Merge \s made \s by \s recursive|
@@ -395,14 +404,14 @@ sub _sync_repo {
             $log->warn("Repo $repo updated")
                 if @src_branches == 1;
         } else {
-            $log->error("Can't recognize 'git pull' output for ".
+            $log->error("Can't recognize 'git pull/push' output for ".
                             "branch $branch: exit=$exit, output=$output");
-            return [500, "Can't recognize git pull output: $output"];
+            return [500, "Can't recognize git pull/push output: $output"];
         }
-        $log->debug("Result of 'git pull' for branch $branch of repo $repo: ".
-                        "exit=$exit, output=$output");
+        $log->debug("Result of 'git pull/push' for branch $branch of repo ".
+                        "$repo: exit=$exit, output=$output");
 
-        $output = _myqx("cd '$dest/$repo'; ".
+        $output = my_qx("cd '$dest/$repo'; ".
                             "LANG=C git fetch --tags '$src/$repo' 2>&1");
         $exit = $? & 255;
         if ($exit != 0) {
@@ -419,8 +428,8 @@ sub _sync_repo {
             $changed_branch++;
             $log->info("Deleting branch $branch of repo $repo because ".
                            "it no longer exists in src ...");
-            _mysystem("cd '$dest/$repo' && git checkout master 2>/dev/null && ".
-                          "git branch -D '$branch' 2>/dev/null");
+            system("cd '$dest/$repo' && git checkout master 2>/dev/null && ".
+                       "git branch -D '$branch' 2>/dev/null");
             if (($? & 255) != 0) {
                 $log->error("Failed deleting branch $branch of repo $repo: $?");
             }
@@ -439,10 +448,10 @@ $SPEC{sync_bunch} = {
         'Synchronize bunch to another bunch',
     description   => <<'_',
 
-For each git repository in the bunch, will perform a 'git pull' from the
-destination for each branch. If repository in destination doesn't exist, it will
-be rsync-ed first from source. When 'git pull' fails, will exit to let you fix
-the problem manually.
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
 
 For all other non-git repos, will simply synchronize by one-way rsync.
 
@@ -468,12 +477,25 @@ are not owned by root), turn this option on.
 _
             default      => 0,
         }],
+        use_bare => ['bool' => {
+            summary      => 'Whether to create bare git repo instead of '.
+                'copying repo when target does not exist',
+            description  => <<'_',
+
+When target repo does not exist, gitbunch can either copy the source repo using
+`rsync`, or it can create target repo with `git init --bare`.
+
+Non-repos will still be copied/rsync-ed.
+
+_
+            default      => 0,
+        }],
     },
     "_cmdline.suppress_output_on_success" => 1,
     deps => {
         all => [
-            {exec => 'git'},
-            {exec => 'rsync'},
+            {prog => 'git'},
+            {prog => 'rsync'},
         ],
     },
 };
@@ -488,6 +510,7 @@ sub sync_bunch {
     my $delete_branch = $args{delete_branch} // 0;
     my $source = $args{source};
     my $target = $args{target};
+    my $use_bare = $args{use_bare} // 0;
 
     my $cmd;
 
@@ -509,11 +532,11 @@ sub sync_bunch {
   ENTRY:
     for my $e (sort $sortsub @entries) {
         next ENTRY if _skip_process_entry($e, \%args, "$source/$e");
-        my $is_repo = (-d "$source/$e") && (-d "$source/$e/.git");
+        my $is_repo = _is_repo("$source/$e");
         if (!$is_repo) {
             $log->info("Sync-ing non-git file/directory $e ...");
             $cmd = "rsync -${a}z --del --force ".shell_quote("$source/$e")." .";
-            _mysystem($cmd);
+            system($cmd);
             if ($?) {
                 $log->warn("Rsync failed, please check: $?");
                 $res{$e} = [500, "rsync failed: $?"];
@@ -524,25 +547,38 @@ sub sync_bunch {
         }
 
         if (!(-e $e)) {
-            $log->info("Copying repo $e ...");
-            $cmd = "rsync -${a}z ".shell_quote("$source/$e")." .";
-            _mysystem($cmd);
-            if ($?) {
-                $log->warn("Rsync failed, please check: $?");
-                $res{$e} = [500, "rsync failed: $?"];
+            if ($use_bare) {
+                $log->info("Initializing target repo $e ...");
+                $cmd = "mkdir ".shell_quote($e)." && cd ".shell_quote($e).
+                    " && git init --bare";
+                system($cmd);
+                if ($?) {
+                    $log->warn("Git init failed, please check: $?");
+                    $res{$e} = [500, "git init failed: $?"];
+                    next ENTRY;
+                }
+                # continue to sync-ing
             } else {
-                $res{$e} = [200, "rsync-ed"];
+                $log->info("Copying repo $e ...");
+                $cmd = "rsync -${a}z ".shell_quote("$source/$e")." .";
+                system($cmd);
+                if ($?) {
+                    $log->warn("Rsync failed, please check: $?");
+                    $res{$e} = [500, "rsync failed: $?"];
+                } else {
+                    $res{$e} = [200, "rsync-ed"];
+                }
+                $log->warn("Repo $e copied");
+                next ENTRY;
             }
-            $log->warn("Repo $e copied");
-            next ENTRY;
-        } else {
-            $log->info("Sync-ing repo $e ...");
-            my $res = _sync_repo(
-                $source, $target, $e,
-                {delete_branch => $delete_branch},
-            );
-            $res{$e} = $res;
         }
+
+        $log->info("Sync-ing repo $e ...");
+        my $res = _sync_repo(
+            $source, $target, $e,
+            {delete_branch => $delete_branch},
+        );
+        $res{$e} = $res;
     }
 
     [200,
@@ -591,7 +627,7 @@ sub exec_bunch {
         $CWD = $i++ ? "../$repo" : $repo;
         next REPO if _skip_process_repo($repo, \%args, ".");
         $log->info("Executing command on $repo ...");
-        _mysystem($command);
+        system($command);
         if ($?) {
             $log->warn("Command failed: $?");
             $res{$repo} = [500, "Command failed: $?"];
@@ -611,6 +647,9 @@ $SPEC{backup_bunch} = {
     summary       =>
         'Backup bunch directory to another directory using rsync',
     description   => <<'_',
+
+NOTE: This function is deprecated. If you want space-efficient backup of your
+bunch, sync-ing with --use_bare option is now the recommended way.
 
 Simply uses rsync to copy bunch directory to another, except that for all git
 projects, only .git/ will be rsync-ed. This utilizes the fact that .git/
@@ -681,9 +720,9 @@ _
     ],
     deps => {
         all => [
-            {exec => 'ls'},
-            {exec => 'gzip'},
-            {exec => 'rsync'},
+            {prog => 'ls'},
+            {prog => 'gzip'},
+            {prog => 'rsync'},
         ],
     },
 };
@@ -724,7 +763,7 @@ sub backup_bunch {
     for my $e (@entries) {
         next ENTRY if _skip_process_entry($e, \%args, "$source/$e");
         my $is_dir = (-d "$source/$e");
-        my $is_repo = $is_dir && (-d "$source/$e/.git");
+        my $is_repo = _is_repo("$source/$e");
         if ($is_repo) {
             push @included_repos, $e;
         } elsif ($is_dir) {
@@ -770,7 +809,7 @@ sub backup_bunch {
             shell_quote($source), "/ ",
             shell_quote($target), "/"
         );
-        _mysystem($cmd);
+        system($cmd);
         return [500, "Backup did not succeed, please check: $?"] if $?;
     }
 
@@ -786,12 +825,12 @@ sub backup_bunch {
                          @files, @nongit_dirs, @included_repos),
                 " | gzip -c > .ls-laR.gz"
             );
-            _mysystem($cmd);
+            system($cmd);
             return [500, "Indexing did not succeed, please check: $?"] if $?;
         }
         my $cmd = "rsync ".shell_quote("$source/.ls-laR.gz")." ".
             shell_quote("$target/");
-        _mysystem($cmd);
+        system($cmd);
         return [500, "Copying index did not succeed, please check: $?"] if $?;
     }
 
@@ -812,7 +851,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.21
+version 0.22
 
 =head1 SYNOPSIS
 
@@ -822,8 +861,8 @@ files, etc):
 
  % gitbunch check ~/repos
 
-To synchronize bunch to another (will do a 'git pull' for each git repo, and do
-an rsync for everything else):
+To synchronize bunch to another (will do a 'git pull/push' for each git repo,
+and do an rsync for everything else):
 
  % gitbunch sync ~/repos /mnt/laptop/repos
 
@@ -865,6 +904,12 @@ None of the functions are exported by default, but they are exportable.
 =head1 FAQ
 
 =head1 TODO
+
+=over 4
+
+=item * Can't handle bare source repos
+
+=back
 
 =head1 SEE ALSO
 
