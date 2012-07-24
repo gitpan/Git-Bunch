@@ -4,7 +4,7 @@
       "Steven Haryanto <stevenharyanto@gmail.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300006, CPAN::Meta::Converter version 2.113640",
+   "generated_by" : "Dist::Zilla version 4.300002, CPAN::Meta::Converter version 2.112150",
    "license" : [
       "perl_5"
    ],
@@ -52,6 +52,6 @@
          "url" : "http://github.com/sharyanto/perl-Git-Bunch"
       }
    },
-   "version" : "0.22"
+   "version" : "0.23"
 }
 

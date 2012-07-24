@@ -15,7 +15,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
-our $VERSION = '0.22'; # VERSION
+our $VERSION = '0.23'; # VERSION
 
 our %SPEC;
 
@@ -252,7 +252,7 @@ sub check_bunch {
         $log->debug("Checking repo $repo ...");
 
         my $output = `LANG=C git status 2>&1`;
-        my $exit = $? & 255;
+        my $exit = $? >> 8;
         if ($exit == 0 && $output =~ /nothing to commit/) {
             $log->info("$repo is clean");
             $res{$repo} = [200, "Clean"];
@@ -303,19 +303,19 @@ sub _sync_repo {
 
     local $CWD = "$src/$repo";
     @src_branches = map {(/^[* ] (.+)/, $1)[-1]} my_qx("LANG=C git branch");
-    $exit = $? & 255;
+    $exit = $? >> 8;
     if ($exit) {
-        $log->error("Can't list branches on src repo $src/$repo: $?");
+        $log->error("Can't list branches on src repo $src/$repo: $exit");
         return [500, "Can't list source branches"];
     }
     $log->debugf("Source branches: %s", \@src_branches);
 
     for my $branch (@src_branches) {
         my $output = my_qx("LANG=C git log -1 '$branch'");
-        $exit = $? & 255;
+        $exit = $? >> 8;
         if ($exit) {
             $log->error("Can't find out head for branch $branch on src repo ".
-                            "$src/$repo: $?");
+                            "$src/$repo: $exit");
             return [500, "Can't find out head for source branch $branch"];
         }
         $output =~ /commit (\S+)/ or do {
@@ -331,16 +331,16 @@ sub _sync_repo {
     my $is_bare = _is_repo(".") == 2;
     @dest_branches = map {(/^[* ] (.+)/, $1)[-1]} my_qx("LANG=C git branch");
     if ($exit) {
-        $log->error("Can't list branches on dest repo $repo: $?");
-        return [500, "Can't list branches on dest: $?"];
+        $log->error("Can't list branches on dest repo $repo: $exit");
+        return [500, "Can't list branches on dest: $exit"];
     }
     $log->debugf("Dest branches: %s", \@dest_branches);
     for my $branch (@dest_branches) {
         my $output = my_qx("LANG=C git log -1 '$branch'");
-        $exit = $? & 255;
+        $exit = $? >> 8;
         if ($exit) {
             $log->error("Can't find out head for branch $branch on dest repo ".
-                            "$dest/$repo: $?");
+                            "$dest/$repo: $exit");
             return [500, "Can't find out head for dest branch $branch"];
         }
         $output =~ /commit (\S+)/ or do {
@@ -387,7 +387,7 @@ sub _sync_repo {
                      "LANG=C git pull '$src/$repo' '$branch' 2>&1"
                  ));
         }
-        $exit = $? & 255;
+        $exit = $? >> 8;
         if ($exit == 0 && $output =~ /Already up-to-date/) {
             $log->debug("Branch $branch of repo $repo is up to date");
             next BRANCH;
@@ -413,7 +413,7 @@ sub _sync_repo {
 
         $output = my_qx("cd '$dest/$repo'; ".
                             "LANG=C git fetch --tags '$src/$repo' 2>&1");
-        $exit = $? & 255;
+        $exit = $? >> 8;
         if ($exit != 0) {
             $log->debug("Failed fetching tags: ".
                             "$output (exit=$exit)");
@@ -430,9 +430,9 @@ sub _sync_repo {
                            "it no longer exists in src ...");
             system("cd '$dest/$repo' && git checkout master 2>/dev/null && ".
                        "git branch -D '$branch' 2>/dev/null");
-            if (($? & 255) != 0) {
-                $log->error("Failed deleting branch $branch of repo $repo: $?");
-            }
+            $exit = $? >> 8;
+            $log->error("Failed deleting branch $branch of repo $repo: $exit")
+                if $exit;
         }
     }
 
@@ -511,6 +511,7 @@ sub sync_bunch {
     my $source = $args{source};
     my $target = $args{target};
     my $use_bare = $args{use_bare} // 0;
+    my $exit;
 
     my $cmd;
 
@@ -529,17 +530,21 @@ sub sync_bunch {
     $source = Cwd::abs_path($source);
     local $CWD = $target;
     my %res;
+    my $i = 0;
   ENTRY:
     for my $e (sort $sortsub @entries) {
+        ++$i;
         next ENTRY if _skip_process_entry($e, \%args, "$source/$e");
         my $is_repo = _is_repo("$source/$e");
         if (!$is_repo) {
-            $log->info("Sync-ing non-git file/directory $e ...");
+            $log->infof("(%d/%d) Sync-ing non-git file/directory %s ...",
+                    $i, @entries+0, $e);
             $cmd = "rsync -${a}z --del --force ".shell_quote("$source/$e")." .";
             system($cmd);
-            if ($?) {
-                $log->warn("Rsync failed, please check: $?");
-                $res{$e} = [500, "rsync failed: $?"];
+            $exit = $? >> 8;
+            if ($exit) {
+                $log->warn("Rsync failed, please check: $exit");
+                $res{$e} = [500, "rsync failed: $exit"];
             } else {
                 $res{$e} = [200, "rsync-ed"];
             }
@@ -552,19 +557,22 @@ sub sync_bunch {
                 $cmd = "mkdir ".shell_quote($e)." && cd ".shell_quote($e).
                     " && git init --bare";
                 system($cmd);
-                if ($?) {
-                    $log->warn("Git init failed, please check: $?");
-                    $res{$e} = [500, "git init failed: $?"];
+                $exit = $? >> 8;
+                if ($exit) {
+                    $log->warn("Git init failed, please check: $exit");
+                    $res{$e} = [500, "git init failed: $exit"];
                     next ENTRY;
                 }
                 # continue to sync-ing
             } else {
-                $log->info("Copying repo $e ...");
+                $log->infof("(%d/%d) Copying repo %s ...",
+                        $i, @entries+0, $e);
                 $cmd = "rsync -${a}z ".shell_quote("$source/$e")." .";
                 system($cmd);
-                if ($?) {
-                    $log->warn("Rsync failed, please check: $?");
-                    $res{$e} = [500, "rsync failed: $?"];
+                $exit = $? >> 8;
+                if ($exit) {
+                    $log->warn("Rsync failed, please check: $exit");
+                    $res{$e} = [500, "rsync failed: $exit"];
                 } else {
                     $res{$e} = [200, "rsync-ed"];
                 }
@@ -573,7 +581,8 @@ sub sync_bunch {
             }
         }
 
-        $log->info("Sync-ing repo $e ...");
+        $log->infof("(%d/%d) Sync-ing repo %s ...",
+                $i, @entries+0, $e);
         my $res = _sync_repo(
             $source, $target, $e,
             {delete_branch => $delete_branch},
@@ -610,6 +619,7 @@ _
 sub exec_bunch {
     my %args = @_;
     my $res;
+    my $exit;
 
     # XXX schema
     $res = _check_common_args(\%args);
@@ -628,9 +638,10 @@ sub exec_bunch {
         next REPO if _skip_process_repo($repo, \%args, ".");
         $log->info("Executing command on $repo ...");
         system($command);
-        if ($?) {
-            $log->warn("Command failed: $?");
-            $res{$repo} = [500, "Command failed: $?"];
+        $exit = $? >> 8;
+        if ($exit) {
+            $log->warn("Command failed: $exit");
+            $res{$repo} = [500, "Command failed: $exit"];
         } else {
             $res{$repo} = [200, "Command successful"];
         }
@@ -730,6 +741,7 @@ sub backup_bunch {
     my %args = @_;
 
     my $res;
+    my $exit;
 
     # XXX schema
     $res = _check_common_args(\%args);
@@ -810,7 +822,8 @@ sub backup_bunch {
             shell_quote($target), "/"
         );
         system($cmd);
-        return [500, "Backup did not succeed, please check: $?"] if $?;
+        $exit = $? >> 8;
+        return [500, "Backup did not succeed, please check: $exit"] if $exit;
     }
 
     if ($index) {
@@ -826,12 +839,16 @@ sub backup_bunch {
                 " | gzip -c > .ls-laR.gz"
             );
             system($cmd);
-            return [500, "Indexing did not succeed, please check: $?"] if $?;
+            $exit = $? >> 8;
+            return [500, "Indexing did not succeed, please check: $exit"]
+                if $exit;
         }
         my $cmd = "rsync ".shell_quote("$source/.ls-laR.gz")." ".
             shell_quote("$target/");
         system($cmd);
-        return [500, "Copying index did not succeed, please check: $?"] if $?;
+        $exit = $? >> 8;
+        return [500, "Copying index did not succeed, please check: $exit"]
+            if $exit;
     }
 
     [200, "OK"];
@@ -851,7 +868,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.22
+version 0.23
 
 =head1 SYNOPSIS
 
@@ -912,6 +929,17 @@ None of the functions are exported by default, but they are exportable.
 =back
 
 =head1 SEE ALSO
+
+B<mr>, http://joeyh.name/code/mr/ . You probably want to use this instead. mr
+supports other control version software aside from git, doesn't restrict you to
+put all your repos in one directory, supports more operations, and has been
+developed since 2007. Had I known about mr, I probably wouldn't have started
+Git::Bunch. On the other hand, Git::Bunch is simpler (I think), doesn't require
+any config file, and can copy/sync files/directories not under source control. I
+mainly use Git::Bunch to quickly: 1) check whether there are any of my
+repositories which have uncommitted changes; 2) synchronize (pull/push) to other
+locations. I put all my data in one big gitbunch directory; I find it simpler.
+Git::Bunch works for me and I use it daily.
 
 =head1 AUTHOR
 

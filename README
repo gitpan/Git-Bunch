@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.22
+    version 0.23
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -56,6 +56,18 @@ TODO
     *   Can't handle bare source repos
 
 SEE ALSO
+    mr, http://joeyh.name/code/mr/ . You probably want to use this instead.
+    mr supports other control version software aside from git, doesn't
+    restrict you to put all your repos in one directory, supports more
+    operations, and has been developed since 2007. Had I known about mr, I
+    probably wouldn't have started Git::Bunch. On the other hand, Git::Bunch
+    is simpler (I think), doesn't require any config file, and can copy/sync
+    files/directories not under source control. I mainly use Git::Bunch to
+    quickly: 1) check whether there are any of my repositories which have
+    uncommitted changes; 2) synchronize (pull/push) to other locations. I
+    put all my data in one big gitbunch directory; I find it simpler.
+    Git::Bunch works for me and I use it daily.
+
 AUTHOR
     Steven Haryanto <stevenharyanto@gmail.com>
 
