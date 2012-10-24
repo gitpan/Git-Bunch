@@ -4,7 +4,7 @@
       "Steven Haryanto <stevenharyanto@gmail.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300002, CPAN::Meta::Converter version 2.112150",
+   "generated_by" : "Dist::Zilla version 4.300006, CPAN::Meta::Converter version 2.113640",
    "license" : [
       "perl_5"
    ],
@@ -29,8 +29,7 @@
             "Builtin::Logged" : 0,
             "File::chdir" : 0,
             "Log::Any" : 0,
-            "Log::Any::App" : 0,
-            "Perinci::CmdLine" : "0.40",
+            "Perinci::CmdLine" : "0.66",
             "Rinci" : "v1.1.14",
             "String::ShellQuote" : 0,
             "perl" : "5.010000"
@@ -40,6 +39,7 @@
          "requires" : {
             "File::Slurp::Shortcuts" : 0,
             "File::Which" : 0,
+            "Probe::Perl" : 0,
             "Test::More" : "0.96",
             "autodie" : 0
          }
@@ -52,6 +52,6 @@
          "url" : "http://github.com/sharyanto/perl-Git-Bunch"
       }
    },
-   "version" : "0.23"
+   "version" : "0.24"
 }
 

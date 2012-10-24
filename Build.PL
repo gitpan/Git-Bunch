@@ -10,6 +10,7 @@ my %module_build_args = (
     "File::Slurp::Shortcuts" => 0,
     "File::Which" => 0,
     "Module::Build" => "0.3601",
+    "Probe::Perl" => 0,
     "Test::More" => "0.96",
     "autodie" => 0
   },
@@ -21,7 +22,7 @@ my %module_build_args = (
     "Steven Haryanto <stevenharyanto\@gmail.com>"
   ],
   "dist_name" => "Git-Bunch",
-  "dist_version" => "0.23",
+  "dist_version" => "0.24",
   "license" => "perl",
   "module_name" => "Git::Bunch",
   "recommends" => {},
@@ -30,9 +31,8 @@ my %module_build_args = (
     "Builtin::Logged" => 0,
     "File::chdir" => 0,
     "Log::Any" => 0,
-    "Log::Any::App" => 0,
-    "Perinci::CmdLine" => "0.40",
-    "Rinci" => "1.1.14",
+    "Perinci::CmdLine" => "0.66",
+    "Rinci" => "v1.1.14",
     "String::ShellQuote" => 0,
     "perl" => "5.010000"
   },

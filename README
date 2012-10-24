@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.23
+    version 0.24
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -67,6 +67,332 @@ SEE ALSO
     uncommitted changes; 2) synchronize (pull/push) to other locations. I
     put all my data in one big gitbunch directory; I find it simpler.
     Git::Bunch works for me and I use it daily.
+
+DESCRIPTION
+    This module has Rinci metadata.
+
+FUNCTIONS
+    None are exported by default, but they are exportable.
+
+  backup_bunch(%args) -> [status, msg, result, meta]
+    Backup bunch directory to another directory using rsync.
+
+    NOTE: This function is deprecated. If you want space-efficient backup of
+    your bunch, sync-ing with --use_bare option is now the recommended way.
+
+    Simply uses rsync to copy bunch directory to another, except that for
+    all git projects, only .git/ will be rsync-ed. This utilizes the fact
+    that .git/ contains the whole project's data, the working copy can be
+    checked out from .git/.
+
+    Will run check_bunch first and require all repos to be clean before
+    running the backup, unless 'check' is turned off.
+
+    Note: Saving only .git/ subdirectory saves disk space, but will not save
+    uncommited changes, untracked files, or .gitignore'd files. Make sure
+    you have committed everything to git before doing backup. Also note that
+    if you need to restore files, they will be checked out from the
+    repository, and the original ctime/mtime information is not preserved.
+    backup_bunch() does store this information for you by saving the output
+    of 'ls -laR' command, but have *not* implemented routine to restore this
+    data into restored files.
+
+    Arguments ('*' denotes required arguments):
+
+    *   backup => *bool* (default: 1)
+
+        Whether to do actual backup/rsync.
+
+        You can set backup=0 and index=1 to only run indexing, for example.
+
+    *   check => *bool* (default: 0)
+
+        Whether to check bunch first before doing backup.
+
+    *   delete_excluded => *bool*
+
+        Delete excluded repos in target.
+
+    *   exclude_files => *bool*
+
+        Exclude files from processing.
+
+        This only applies to 'backup*bunch' and 'sync*bunch' operations.
+        Operations like 'check*bunch' and 'exec*bunch' already ignore these
+        and only operate on git repos.
+
+    *   exclude_non_git_dirs => *bool*
+
+        Exclude non-git dirs from processing.
+
+        This only applies to 'backup*bunch' and 'sync*bunch' operations.
+        Operations like 'check*bunch' and 'exec*bunch' already ignore these
+        and only operate on git repos.
+
+    *   exclude_repos => *array*
+
+        Exclude some repos from processing.
+
+    *   exclude_repos_pat => *str*
+
+        Specify regex pattern of repos to exclude.
+
+    *   extra_rsync_opts => *array*
+
+        Pass extra options to rsync command.
+
+        Extra options to pass to rsync command. Note that the options will
+        be shell quoted, , so you should pass it unquoted, e.g.
+        ['--exclude', '/Program Files'].
+
+    *   include_repos => *array*
+
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
+
+    *   include_repos_pat => *str*
+
+        Specify regex pattern of repos to include.
+
+    *   index => *bool* (default: 1)
+
+        Whether to do "ls -laR" after backup.
+
+    *   sort => *str* (default: "-mtime")
+
+        Order entries in bunch.
+
+    *   source => *str*
+
+        Directory to check.
+
+    *   target => *str*
+
+        Destination bunch.
+
+    Return value:
+
+    Returns an enveloped result (an array). First element (status) is an
+    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
+    function error). Second element (msg) is a string containing error
+    message, or 'OK' if status is 200. Third element (result) is optional,
+    the actual result. Fourth element (meta) is called result metadata and
+    is optional, a hash that contains extra information.
+
+  check_bunch(%args) -> [status, msg, result, meta]
+    Check status of git repositories inside gitbunch directory.
+
+    Will perform a 'git status' for each git repositories inside the bunch
+    and report which repositories are clean/unclean.
+
+    Will die if can't chdir into bunch or git repository.
+
+    Arguments ('*' denotes required arguments):
+
+    *   exclude_files => *bool*
+
+        Exclude files from processing.
+
+        This only applies to 'backup*bunch' and 'sync*bunch' operations.
+        Operations like 'check*bunch' and 'exec*bunch' already ignore these
+        and only operate on git repos.
+
+    *   exclude_non_git_dirs => *bool*
+
+        Exclude non-git dirs from processing.
+
+        This only applies to 'backup*bunch' and 'sync*bunch' operations.
+        Operations like 'check*bunch' and 'exec*bunch' already ignore these
+        and only operate on git repos.
+
+    *   exclude_repos => *array*
+
+        Exclude some repos from processing.
+
+    *   exclude_repos_pat => *str*
+
+        Specify regex pattern of repos to exclude.
+
+    *   include_repos => *array*
+
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
+
+    *   include_repos_pat => *str*
+
+        Specify regex pattern of repos to include.
+
+    *   sort => *str* (default: "-mtime")
+
+        Order entries in bunch.
+
+    *   source => *str*
+
+        Directory to check.
+
+    Return value:
+
+    Returns an enveloped result (an array). First element (status) is an
+    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
+    function error). Second element (msg) is a string containing error
+    message, or 'OK' if status is 200. Third element (result) is optional,
+    the actual result. Fourth element (meta) is called result metadata and
+    is optional, a hash that contains extra information.
+
+  exec_bunch(%args) -> [status, msg, result, meta]
+    Execute a command for each repo in the bunch.
+
+    For each git repository in the bunch, will chdir to it and execute
+    specified command.
+
+    Arguments ('*' denotes required arguments):
+
+    *   command => *str* (default: 0)
+
+        Command to execute.
+
+    *   exclude_files => *bool*
+
+        Exclude files from processing.
+
+        This only applies to 'backup*bunch' and 'sync*bunch' operations.
+        Operations like 'check*bunch' and 'exec*bunch' already ignore these
+        and only operate on git repos.
+
+    *   exclude_non_git_dirs => *bool*
+
+        Exclude non-git dirs from processing.
+
+        This only applies to 'backup*bunch' and 'sync*bunch' operations.
+        Operations like 'check*bunch' and 'exec*bunch' already ignore these
+        and only operate on git repos.
+
+    *   exclude_repos => *array*
+
+        Exclude some repos from processing.
+
+    *   exclude_repos_pat => *str*
+
+        Specify regex pattern of repos to exclude.
+
+    *   include_repos => *array*
+
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
+
+    *   include_repos_pat => *str*
+
+        Specify regex pattern of repos to include.
+
+    *   sort => *str* (default: "-mtime")
+
+        Order entries in bunch.
+
+    *   source => *str*
+
+        Directory to check.
+
+    Return value:
+
+    Returns an enveloped result (an array). First element (status) is an
+    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
+    function error). Second element (msg) is a string containing error
+    message, or 'OK' if status is 200. Third element (result) is optional,
+    the actual result. Fourth element (meta) is called result metadata and
+    is optional, a hash that contains extra information.
+
+  sync_bunch(%args) -> [status, msg, result, meta]
+    Synchronize bunch to another bunch.
+
+    For each git repository in the bunch, will perform a 'git pull/push' for
+    each branch. If repository in destination doesn't exist, it will be
+    rsync-ed first from source. When 'git pull' fails, will exit to let you
+    fix the problem manually.
+
+    For all other non-git repos, will simply synchronize by one-way rsync.
+
+    Arguments ('*' denotes required arguments):
+
+    *   delete_branch => *bool* (default: 0)
+
+        Whether to delete branches in dest repos not existing in source
+        repos.
+
+    *   exclude_files => *bool*
+
+        Exclude files from processing.
+
+        This only applies to 'backup*bunch' and 'sync*bunch' operations.
+        Operations like 'check*bunch' and 'exec*bunch' already ignore these
+        and only operate on git repos.
+
+    *   exclude_non_git_dirs => *bool*
+
+        Exclude non-git dirs from processing.
+
+        This only applies to 'backup*bunch' and 'sync*bunch' operations.
+        Operations like 'check*bunch' and 'exec*bunch' already ignore these
+        and only operate on git repos.
+
+    *   exclude_repos => *array*
+
+        Exclude some repos from processing.
+
+    *   exclude_repos_pat => *str*
+
+        Specify regex pattern of repos to exclude.
+
+    *   include_repos => *array*
+
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
+
+    *   include_repos_pat => *str*
+
+        Specify regex pattern of repos to include.
+
+    *   rsync_opt_maintain_ownership => *bool* (default: 0)
+
+        Whether or not, when rsync-ing from source, we use -a (= -rlptgoD)
+        or -rlptD (-a minus -go).
+
+        Sometimes using -a results in failure to preserve permission modes
+        on sshfs-mounted filesystem, while -rlptD succeeds, so by default we
+        don't maintain ownership. If you need to maintain ownership (e.g.
+        you run as root and the repos are not owned by root), turn this
+        option on.
+
+    *   sort => *str* (default: "-mtime")
+
+        Order entries in bunch.
+
+    *   source => *str*
+
+        Directory to check.
+
+    *   target => *str*
+
+        Destination bunch.
+
+    *   use_bare => *bool* (default: 0)
+
+        Whether to create bare git repo instead of copying repo when target
+        does not exist.
+
+        When target repo does not exist, gitbunch can either copy the source
+        repo using "rsync", or it can create target repo with "git init
+        --bare".
+
+        Non-repos will still be copied/rsync-ed.
+
+    Return value:
+
+    Returns an enveloped result (an array). First element (status) is an
+    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
+    function error). Second element (msg) is a string containing error
+    message, or 'OK' if status is 200. Third element (result) is optional,
+    the actual result. Fourth element (meta) is called result metadata and
+    is optional, a hash that contains extra information.
 
 AUTHOR
     Steven Haryanto <stevenharyanto@gmail.com>
