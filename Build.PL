@@ -11,8 +11,7 @@ my %module_build_args = (
     "File::Which" => 0,
     "Module::Build" => "0.3601",
     "Probe::Perl" => 0,
-    "Test::More" => "0.96",
-    "autodie" => 0
+    "Test::More" => "0.96"
   },
   "configure_requires" => {
     "Module::Build" => "0.3601"
@@ -22,7 +21,7 @@ my %module_build_args = (
     "Steven Haryanto <stevenharyanto\@gmail.com>"
   ],
   "dist_name" => "Git-Bunch",
-  "dist_version" => "0.26",
+  "dist_version" => "0.27",
   "license" => "perl",
   "module_name" => "Git::Bunch",
   "recommends" => {},
@@ -31,10 +30,10 @@ my %module_build_args = (
     "Builtin::Logged" => 0,
     "File::chdir" => 0,
     "Log::Any" => 0,
-    "Perinci::CmdLine" => "0.66",
+    "Perinci::CmdLine" => "0.79",
     "Rinci" => "v1.1.14",
     "String::ShellQuote" => 0,
-    "perl" => "5.010000"
+    "perl" => "5.010001"
   },
   "script_files" => [
     "bin/gitbunch"

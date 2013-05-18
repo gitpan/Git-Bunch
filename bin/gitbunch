@@ -1,10 +1,10 @@
 #!/usr/bin/perl
 
-use 5.010;
+use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.26'; # VERSION
+our $VERSION = '0.27'; # VERSION
 
 use Perinci::CmdLine;
 Perinci::CmdLine->new(
@@ -25,13 +25,15 @@ Perinci::CmdLine->new(
 __END__
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
 gitbunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.26
+version 0.27
 
 =head1 DESCRIPTION
 
@@ -62,7 +64,7 @@ Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Steven Haryanto.
+This software is copyright (c) 2013 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

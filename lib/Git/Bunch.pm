@@ -1,6 +1,6 @@
 package Git::Bunch;
 
-use 5.010;
+use 5.010001;
 use strict;
 use warnings;
 use Log::Any '$log';
@@ -15,7 +15,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
-our $VERSION = '0.26'; # VERSION
+our $VERSION = '0.27'; # VERSION
 
 our %SPEC;
 
@@ -252,8 +252,8 @@ sub check_bunch {
     my @entries = sort $sortsub grep {-d} <*>;
 
     my $i = 0;
-    $progress->reset if $progress;
-    $progress->set_target(target => ~~@entries) if $progress;
+    $progress->pos(0) if $progress;
+    $progress->target(~~@entries) if $progress;
   REPO:
     for my $repo (@entries) {
         $CWD = $i++ ? "../$repo" : $repo;
@@ -890,13 +890,15 @@ sub backup_bunch {
 __END__
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
 Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.26
+version 0.27
 
 =head1 SYNOPSIS
 
@@ -945,36 +947,6 @@ See also L<File::RsyBak>, which I wrote to backup everything else.
 =head1 FUNCTIONS
 
 None of the functions are exported by default, but they are exportable.
-
-=head1 FAQ
-
-=head1 TODO
-
-=over 4
-
-=item * Can't handle bare source repos
-
-=back
-
-=head1 SEE ALSO
-
-B<mr>, http://joeyh.name/code/mr/ . You probably want to use this instead. mr
-supports other control version software aside from git, doesn't restrict you to
-put all your repos in one directory, supports more operations, and has been
-developed since 2007. Had I known about mr, I probably wouldn't have started
-Git::Bunch. On the other hand, Git::Bunch is simpler (I think), doesn't require
-any config file, and can copy/sync files/directories not under source control. I
-mainly use Git::Bunch to quickly: 1) check whether there are any of my
-repositories which have uncommitted changes; 2) synchronize (pull/push) to other
-locations. I put all my data in one big gitbunch directory; I find it simpler.
-Git::Bunch works for me and I use it daily.
-
-=head1 DESCRIPTION
-
-
-This module has L<Rinci> metadata.
-
-=head1 FUNCTIONS
 
 
 None are exported by default, but they are exportable.
@@ -1288,13 +1260,36 @@ Return value:
 
 Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
 
+=head1 FAQ
+
+=head1 TODO
+
+=over 4
+
+=item * Can't handle bare source repos
+
+=back
+
+=head1 SEE ALSO
+
+B<mr>, http://joeyh.name/code/mr/ . You probably want to use this instead. mr
+supports other control version software aside from git, doesn't restrict you to
+put all your repos in one directory, supports more operations, and has been
+developed since 2007. Had I known about mr, I probably wouldn't have started
+Git::Bunch. On the other hand, Git::Bunch is simpler (I think), doesn't require
+any config file, and can copy/sync files/directories not under source control. I
+mainly use Git::Bunch to quickly: 1) check whether there are any of my
+repositories which have uncommitted changes; 2) synchronize (pull/push) to other
+locations. I put all my data in one big gitbunch directory; I find it simpler.
+Git::Bunch works for me and I use it daily.
+
 =head1 AUTHOR
 
 Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Steven Haryanto.
+This software is copyright (c) 2013 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
