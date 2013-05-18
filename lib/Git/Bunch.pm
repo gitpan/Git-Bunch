@@ -15,7 +15,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
-our $VERSION = '0.27'; # VERSION
+our $VERSION = '0.28'; # VERSION
 
 our %SPEC;
 
@@ -552,8 +552,8 @@ sub sync_bunch {
     local $CWD = $target;
     my %res;
     my $i = 0;
-    $progress->reset if $progress;
-    $progress->set_target(target => ~~@entries) if $progress;
+    $progress->pos(0) if $progress;
+    $progress->target(~~@entries) if $progress;
   ENTRY:
     for my $e (@entries) {
         ++$i;
@@ -898,7 +898,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.27
+version 0.28
 
 =head1 SYNOPSIS
 

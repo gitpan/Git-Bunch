@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.27
+    version 0.28
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
