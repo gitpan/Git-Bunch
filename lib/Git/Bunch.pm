@@ -15,7 +15,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
-our $VERSION = '0.28'; # VERSION
+our $VERSION = '0.29'; # VERSION
 
 our %SPEC;
 
@@ -25,32 +25,40 @@ $SPEC{":package"} = {
 };
 
 our %common_args_spec = (
-    source           => ['str*'   => {
+    source           => {
         summary      => 'Directory to check',
-        arg_pos      => 0,
-    }],
-    sort             => ['str'   => {
+        schema       => ['str*'],
+        req          => 1,
+        pos          => 0,
+    },
+    sort             => {
         summary      => 'Order entries in bunch',
-        in           => [qw/name -name mtime -mtime rand/],
-        default      => '-mtime',
-    }],
-    include_repos    => ['array'   => {
-        of           => 'str*',
+        schema       => ['str' => {
+            default => '-mtime',
+            in      => [qw/name -name mtime -mtime rand/],
+        }],
+    },
+    include_repos    => {
         summary      => 'Specific git repos to sync, if not specified '.
             'all repos in the bunch will be processed',
-        arg_aliases  => {
+        schema       => ['array' => {
+            of => 'str*',
+        }],
+        cmdline_aliases => {
             repos => {},
         },
-    }],
-    include_repos_pat=> ['str' => {
+    },
+    include_repos_pat=> {
         summary      => 'Specify regex pattern of repos to include',
-    }],
-    exclude_repos    => [array    => {
-        of           => 'str*',
+        schema       => ['str'],
+    },
+    exclude_repos    => {
         summary      => 'Exclude some repos from processing',
-    }],
-    exclude_non_git_dirs => [bool => {
+        schema       => ['array*' => {of => 'str*'}],
+    },
+    exclude_non_git_dirs => {
         summary      => 'Exclude non-git dirs from processing',
+        schema       => ['bool'],
         description  => <<'_',
 
 This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
@@ -58,27 +66,31 @@ This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
 repos.
 
 _
-    }],
-    exclude_files    => [bool => {
+    },
+    exclude_files    => {
         summary      => 'Exclude files from processing',
-        description  => <<'_',
+        schema       => ['bool'],
+    description      => <<'_',
 
 This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
 'check_bunch' and 'exec_bunch' already ignore these and only operate on git
 repos.
 
 _
-    }],
-    exclude_repos_pat=> ['str' => {
+    },
+    exclude_repos_pat=> {
         summary      => 'Specify regex pattern of repos to exclude',
-    }],
+        schema       => ['str'],
+    },
 );
 
 our %target_arg_spec = (
-    target           => ['str*'   => {
+    target           => {
         summary      => 'Destination bunch',
-        arg_pos      => 1,
-    }],
+        schema       => ['str*'],
+        req          => 1,
+        pos          => 1,
+    },
 );
 
 sub _check_common_args {
@@ -209,6 +221,7 @@ sub _check_bunch_sanity {
 }
 
 $SPEC{check_bunch} = {
+    v             => 1.1,
     summary       =>
         'Check status of git repositories inside gitbunch directory',
     description   => <<'_',
@@ -460,6 +473,7 @@ sub _sync_repo {
 }
 
 $SPEC{sync_bunch} = {
+    v             => 1.1,
     summary       =>
         'Synchronize bunch to another bunch',
     description   => <<'_',
@@ -475,14 +489,15 @@ _
     args          => {
         %common_args_spec,
         %target_arg_spec,
-        delete_branch    => ['bool'   => {
+        delete_branch    => {
             summary      => 'Whether to delete branches in dest repos '.
                 'not existing in source repos',
-            default      => 0,
-        }],
-        rsync_opt_maintain_ownership => ['bool' => {
+            schema       => ['bool' => default => 0],
+        },
+        rsync_opt_maintain_ownership => {
             summary      => 'Whether or not, when rsync-ing from source, '.
                 'we use -a (= -rlptgoD) or -rlptD (-a minus -go)',
+            schema       => ['bool' => default => 0],
             description  => <<'_',
 
 Sometimes using -a results in failure to preserve permission modes on
@@ -491,23 +506,33 @@ ownership. If you need to maintain ownership (e.g. you run as root and the repos
 are not owned by root), turn this option on.
 
 _
-            default      => 0,
-        }],
-        use_bare => ['bool' => {
-            summary      => 'Whether to create bare git repo instead of '.
-                'copying repo when target does not exist',
+        },
+        create_bare_target => {
+            summary      => 'Whether to create bare git repo '.
+                'when target does not exist',
+            schema       => ['bool'],
             description  => <<'_',
 
 When target repo does not exist, gitbunch can either copy the source repo using
-`rsync`, or it can create target repo with `git init --bare`.
+`rsync` (the default, if this setting is undefined), or it can create target
+repo with `git init --bare` (if this setting is set to 1), or it can create
+target repo with `git init` (if this setting is set to 0).
+
+Bare git repositories contain only contents of the .git folder inside the
+directory and no working copies of your source files.
+
+Creating bare repos are apt for backup purposes since they are more
+space-efficient.
 
 Non-repos will still be copied/rsync-ed.
 
 _
-            default      => 0,
-        }],
+            cmdline_aliases => {
+                # old name, deprecated since v0.29, remove in later releases
+                use_bare => {},
+            },
+        },
     },
-    "_cmdline.suppress_output_on_success" => 1,
     deps => {
         all => [
             {prog => 'git'},
@@ -531,7 +556,7 @@ sub sync_bunch {
     my $delete_branch = $args{delete_branch} // 0;
     my $source = $args{source};
     my $target = $args{target};
-    my $use_bare = $args{use_bare} // 0;
+    my $create_bare = $args{create_bare_target};
     my $exit;
 
     my $cmd;
@@ -577,10 +602,22 @@ sub sync_bunch {
         }
 
         if (!(-e $e)) {
-            if ($use_bare) {
-                $log->info("Initializing target repo $e ...");
+            if ($create_bare) {
+                $log->info("Initializing target repo $e (bare) ...");
                 $cmd = "mkdir ".shell_quote($e)." && cd ".shell_quote($e).
                     " && git init --bare";
+                system($cmd);
+                $exit = $? >> 8;
+                if ($exit) {
+                    $log->warn("Git init failed, please check: $exit");
+                    $res{$e} = [500, "git init --bare failed: $exit"];
+                    next ENTRY;
+                }
+                # continue to sync-ing
+            } elsif (defined $create_bare) {
+                $log->info("Initializing target repo $e (non-bare) ...");
+                $cmd = "mkdir ".shell_quote($e)." && cd ".shell_quote($e).
+                    " && git init";
                 system($cmd);
                 $exit = $? >> 8;
                 if ($exit) {
@@ -625,6 +662,7 @@ sub sync_bunch {
 }
 
 $SPEC{exec_bunch} = {
+    v             => 1.1,
     summary       =>
         'Execute a command for each repo in the bunch',
     description   => <<'_',
@@ -635,14 +673,14 @@ command.
 _
     args          => {
         %common_args_spec,
-        command   => ['str*'   => {
-            summary      => 'Command to execute',
-            default      => 0,
-            arg_pos      => 1,
-            arg_greedy   => 1,
-        }],
+        command   => {
+            summary  => 'Command to execute',
+            schema   => ['str*'],
+            req      => 1,
+            pos      => 1,
+            greedy   => 1,
+        },
     },
-    "_cmdline.suppress_output_on_success" => 1,
 };
 sub exec_bunch {
     my %args = @_;
@@ -682,212 +720,11 @@ sub exec_bunch {
      {"cmdline.display_result" => 0}];
 }
 
-$SPEC{backup_bunch} = {
-    summary       =>
-        'Backup bunch directory to another directory using rsync',
-    description   => <<'_',
-
-NOTE: This function is deprecated. If you want space-efficient backup of your
-bunch, sync-ing with --use_bare option is now the recommended way.
-
-Simply uses rsync to copy bunch directory to another, except that for all git
-projects, only .git/ will be rsync-ed. This utilizes the fact that .git/
-contains the whole project's data, the working copy can be checked out from
-.git/.
-
-Will run check_bunch first and require all repos to be clean before running the
-backup, unless 'check' is turned off.
-
-Note: Saving only .git/ subdirectory saves disk space, but will not save
-uncommited changes, untracked files, or .gitignore'd files. Make sure you have
-committed everything to git before doing backup. Also note that if you need to
-restore files, they will be checked out from the repository, and the original
-ctime/mtime information is not preserved. backup_bunch() does store this
-information for you by saving the output of 'ls -laR' command, but have *not*
-implemented routine to restore this data into restored files.
-
-_
-    args          => {
-        %common_args_spec,
-        %target_arg_spec,
-        check            => ['bool'   => {
-            summary      =>
-                'Whether to check bunch first before doing backup',
-            default      => 0,
-        }],
-        backup           => ['bool'   => {
-            summary      => 'Whether to do actual backup/rsync',
-            description  => <<'_',
-
-You can set backup=0 and index=1 to only run indexing, for example.
-
-_
-            default      => 1,
-        }],
-        index            => ['bool'   => {
-            summary      => 'Whether to do "ls -laR" after backup',
-            default      => 1,
-        }],
-        delete_excluded  => [bool    => {
-            summary      => 'Delete excluded repos in target',
-        }],
-        extra_rsync_opts => [array    => {
-            of           => 'str*',
-            summary      => 'Pass extra options to rsync command',
-            description  => <<'_',
-
-Extra options to pass to rsync command. Note that the options will be shell
-quoted, , so you should pass it unquoted, e.g. ['--exclude', '/Program Files'].
-
-_
-        }],
-    },
-
-    # this is already metadata v1.1
-    _examples => [
-        {
-            argv        => [qw(/home/steven/repos /backup/steven/repos
-                               --nocheck)],
-            description => <<'_',
-
-Backup /home/steven/repos to /backup/steven/repos. All git projects inside
-/home/steven/repos will be backed up by only copying its .git/, all non-git
-directories will be backed up in its entirety. Do not run check_bunch() first.
-
-_
-        },
-    ],
-    deps => {
-        all => [
-            {prog => 'ls'},
-            {prog => 'gzip'},
-            {prog => 'rsync'},
-        ],
-    },
-};
-sub backup_bunch {
-    my %args = @_;
-
-    my $res;
-    my $exit;
-
-    # XXX schema
-    $res = _check_common_args(\%args);
-    return $res unless $res->[0] == 200;
-    my $source    = $args{source};
-    my $target    = $args{target};
-    my $check     = $args{check}  // 0;
-    my $backup    = $args{backup} // 1;
-    my $index     = $args{index}  // 1;
-    my $delete_excluded = $args{delete_excluded};
-
-    if ($check) {
-        $res = check_bunch(source => $source);
-        return $res unless $res->[0];
-        return [500, "Some repos are not clean, please fix first"]
-            if grep { $res->[2]{$_}[0] != 200 } keys %{$res->[2]};
-    }
-
-    unless (-d $target) {
-        $log->debugf("Creating target directory %s ...", $target);
-        make_path($target)
-            or return [500, "Can't create target directory $target: $!"];
-    }
-
-    my @included_repos;
-    my @files;
-    my @nongit_dirs;
-    my @entries;
-    opendir my($d), $source; @entries = readdir($d);
-  ENTRY:
-    for my $e (@entries) {
-        next ENTRY if _skip_process_entry($e, \%args, "$source/$e");
-        my $is_dir = (-d "$source/$e");
-        my $is_repo = _is_repo("$source/$e");
-        if ($is_repo) {
-            push @included_repos, $e;
-        } elsif ($is_dir) {
-            push @nongit_dirs, $e unless $args{exclude_non_git_dirs};
-        } else {
-            push @files, $e unless $args{exclude_files};
-        }
-    }
-
-    if ($backup) {
-        $log->info("Backing up bunch $source ===> $target ...");
-        my $cmd = join(
-            "",
-            "rsync ",
-            ($args{extra_rsync_opts} ? map { shell_quote($_), " " }
-                 @{$args{extra_rsync_opts}} : ()),
-            ($log->is_trace() ? "-Pv" : ($log->is_debug() ? "-v" : "")), " ",
-            "-az ",
-            "--include / ",
-            # nondot-dirs are assumed git as repos, only .git/ copied from each
-            (map {
-                (
-                    "--include ", shell_quote("/$_"), " ",
-                    "--include ", shell_quote("/$_/.git"), " ",
-                    "--include ", shell_quote("/$_/.git/**"), " ",
-                )
-            } @included_repos),
-            (map {
-                (
-                    "--include ", shell_quote("/$_"), " ",
-                )
-            } @files),
-            (map {
-                (
-                    "--include ", shell_quote("/$_"), " ",
-                    "--include ", shell_quote("/$_/**"), " ",
-                )
-            } @nongit_dirs),
-            # exclude everything else
-            "--exclude '*' ",
-            "--del --force ",
-            ($args{delete_excluded} ? "--delete-excluded " : ""),
-            shell_quote($source), "/ ",
-            shell_quote($target), "/"
-        );
-        system($cmd);
-        $exit = $? >> 8;
-        return [500, "Backup did not succeed, please check: $exit"] if $exit;
-    }
-
-    if ($index) {
-        $log->info("Indexing bunch $source ...");
-        {
-            local $CWD = $source;
-            my $cmd = join(
-                "",
-                "ls -laR ",
-                join(" ",
-                     map {shell_quote($_)}
-                         @files, @nongit_dirs, @included_repos),
-                " | gzip -c > .ls-laR.gz"
-            );
-            system($cmd);
-            $exit = $? >> 8;
-            return [500, "Indexing did not succeed, please check: $exit"]
-                if $exit;
-        }
-        my $cmd = "rsync ".shell_quote("$source/.ls-laR.gz")." ".
-            shell_quote("$target/");
-        system($cmd);
-        $exit = $? >> 8;
-        return [500, "Copying index did not succeed, please check: $exit"]
-            if $exit;
-    }
-
-    [200, "OK"];
-}
-
 1;
 # ABSTRACT: Manage gitbunch directory (directory which contain git repos)
 
-
-
 __END__
+
 =pod
 
 =encoding utf-8
@@ -898,7 +735,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.28
+version 0.29
 
 =head1 SYNOPSIS
 
@@ -912,11 +749,6 @@ To synchronize bunch to another (will do a 'git pull/push' for each git repo,
 and do an rsync for everything else):
 
  % gitbunch sync ~/repos /mnt/laptop/repos
-
-To backup bunch (will only rsync .git/ for each git repo to destination, and
-rsync everything else in full):
-
- % gitbunch backup ~/repos /media/flashdisk
 
 =head1 DESCRIPTION
 
@@ -951,111 +783,7 @@ None of the functions are exported by default, but they are exportable.
 
 None are exported by default, but they are exportable.
 
-=head2 backup_bunch(%args) -> [status, msg, result, meta]
-
-Backup bunch directory to another directory using rsync.
-
-NOTE: This function is deprecated. If you want space-efficient backup of your
-bunch, sync-ing with --use_bare option is now the recommended way.
-
-Simply uses rsync to copy bunch directory to another, except that for all git
-projects, only .git/ will be rsync-ed. This utilizes the fact that .git/
-contains the whole project's data, the working copy can be checked out from
-.git/.
-
-Will run check_bunch first and require all repos to be clean before running the
-backup, unless 'check' is turned off.
-
-Note: Saving only .git/ subdirectory saves disk space, but will not save
-uncommited changes, untracked files, or .gitignore'd files. Make sure you have
-committed everything to git before doing backup. Also note that if you need to
-restore files, they will be checked out from the repository, and the original
-ctime/mtime information is not preserved. backup_bunch() does store this
-information for you by saving the output of 'ls -laR' command, but have *not*
-implemented routine to restore this data into restored files.
-
-Arguments ('*' denotes required arguments):
-
-=over 4
-
-=item * B<backup> => I<bool> (default: 1)
-
-Whether to do actual backup/rsync.
-
-You can set backup=0 and index=1 to only run indexing, for example.
-
-=item * B<check> => I<bool> (default: 0)
-
-Whether to check bunch first before doing backup.
-
-=item * B<delete_excluded> => I<bool>
-
-Delete excluded repos in target.
-
-=item * B<exclude_files> => I<bool>
-
-Exclude files from processing.
-
-This only applies to 'backupI<bunch' and 'sync>bunch' operations. Operations like
-'checkI<bunch' and 'exec>bunch' already ignore these and only operate on git
-repos.
-
-=item * B<exclude_non_git_dirs> => I<bool>
-
-Exclude non-git dirs from processing.
-
-This only applies to 'backupI<bunch' and 'sync>bunch' operations. Operations like
-'checkI<bunch' and 'exec>bunch' already ignore these and only operate on git
-repos.
-
-=item * B<exclude_repos> => I<array>
-
-Exclude some repos from processing.
-
-=item * B<exclude_repos_pat> => I<str>
-
-Specify regex pattern of repos to exclude.
-
-=item * B<extra_rsync_opts> => I<array>
-
-Pass extra options to rsync command.
-
-Extra options to pass to rsync command. Note that the options will be shell
-quoted, , so you should pass it unquoted, e.g. ['--exclude', '/Program Files'].
-
-=item * B<include_repos> => I<array>
-
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
-
-=item * B<include_repos_pat> => I<str>
-
-Specify regex pattern of repos to include.
-
-=item * B<index> => I<bool> (default: 1)
-
-Whether to do "ls -laR" after backup.
-
-=item * B<sort> => I<str> (default: "-mtime")
-
-Order entries in bunch.
-
-=item * B<source> => I<str>
-
-Directory to check.
-
-=item * B<target> => I<str>
-
-Destination bunch.
-
-=back
-
-Return value:
-
-Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
-
 =head2 check_bunch(%args) -> [status, msg, result, meta]
-
-Check status of git repositories inside gitbunch directory.
 
 Will perform a 'git status' for each git repositories inside the bunch and
 report which repositories are clean/unclean.
@@ -1102,7 +830,7 @@ Specify regex pattern of repos to include.
 
 Order entries in bunch.
 
-=item * B<source> => I<str>
+=item * B<source>* => I<str>
 
 Directory to check.
 
@@ -1114,8 +842,6 @@ Returns an enveloped result (an array). First element (status) is an integer con
 
 =head2 exec_bunch(%args) -> [status, msg, result, meta]
 
-Execute a command for each repo in the bunch.
-
 For each git repository in the bunch, will chdir to it and execute specified
 command.
 
@@ -1123,7 +849,7 @@ Arguments ('*' denotes required arguments):
 
 =over 4
 
-=item * B<command> => I<str> (default: 0)
+=item * B<command>* => I<str>
 
 Command to execute.
 
@@ -1163,7 +889,7 @@ Specify regex pattern of repos to include.
 
 Order entries in bunch.
 
-=item * B<source> => I<str>
+=item * B<source>* => I<str>
 
 Directory to check.
 
@@ -1175,8 +901,6 @@ Returns an enveloped result (an array). First element (status) is an integer con
 
 =head2 sync_bunch(%args) -> [status, msg, result, meta]
 
-Synchronize bunch to another bunch.
-
 For each git repository in the bunch, will perform a 'git pull/push' for each
 branch. If repository in destination doesn't exist, it will be rsync-ed first
 from source. When 'git pull' fails, will exit to let you fix the problem
@@ -1187,6 +911,23 @@ For all other non-git repos, will simply synchronize by one-way rsync.
 Arguments ('*' denotes required arguments):
 
 =over 4
+
+=item * B<create_bare_target> => I<bool>
+
+Whether to create bare git repo when target does not exist.
+
+When target repo does not exist, gitbunch can either copy the source repo using
+C<rsync> (the default, if this setting is undefined), or it can create target
+repo with C<git init --bare> (if this setting is set to 1), or it can create
+target repo with C<git init> (if this setting is set to 0).
+
+Bare git repositories contain only contents of the .git folder inside the
+directory and no working copies of your source files.
+
+Creating bare repos are apt for backup purposes since they are more
+space-efficient.
+
+Non-repos will still be copied/rsync-ed.
 
 =item * B<delete_branch> => I<bool> (default: 0)
 
@@ -1237,22 +978,13 @@ are not owned by root), turn this option on.
 
 Order entries in bunch.
 
-=item * B<source> => I<str>
+=item * B<source>* => I<str>
 
 Directory to check.
 
-=item * B<target> => I<str>
+=item * B<target>* => I<str>
 
 Destination bunch.
-
-=item * B<use_bare> => I<bool> (default: 0)
-
-Whether to create bare git repo instead of copying repo when target does not exist.
-
-When target repo does not exist, gitbunch can either copy the source repo using
-C<rsync>, or it can create target repo with C<git init --bare>.
-
-Non-repos will still be copied/rsync-ed.
 
 =back
 
@@ -1295,4 +1027,3 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

@@ -7,11 +7,7 @@ use Module::Build 0.3601;
 
 my %module_build_args = (
   "build_requires" => {
-    "File::Slurp::Shortcuts" => 0,
-    "File::Which" => 0,
-    "Module::Build" => "0.3601",
-    "Probe::Perl" => 0,
-    "Test::More" => "0.96"
+    "Module::Build" => "0.3601"
   },
   "configure_requires" => {
     "Module::Build" => "0.3601"
@@ -21,7 +17,7 @@ my %module_build_args = (
     "Steven Haryanto <stevenharyanto\@gmail.com>"
   ],
   "dist_name" => "Git-Bunch",
-  "dist_version" => "0.28",
+  "dist_version" => "0.29",
   "license" => "perl",
   "module_name" => "Git::Bunch",
   "recommends" => {},
@@ -37,9 +33,28 @@ my %module_build_args = (
   },
   "script_files" => [
     "bin/gitbunch"
-  ]
+  ],
+  "test_requires" => {
+    "File::Slurp::Shortcuts" => 0,
+    "File::Which" => 0,
+    "Probe::Perl" => 0,
+    "Test::More" => "0.96"
+  }
 );
 
+
+unless ( eval { Module::Build->VERSION(0.4004) } ) {
+  my $tr = delete $module_build_args{test_requires};
+  my $br = $module_build_args{build_requires};
+  for my $mod ( keys %$tr ) {
+    if ( exists $br->{$mod} ) {
+      $br->{$mod} = $tr->{$mod} if $tr->{$mod} > $br->{$mod};
+    }
+    else {
+      $br->{$mod} = $tr->{$mod};
+    }
+  }
+}
 
 my $build = Module::Build->new(%module_build_args);
 
