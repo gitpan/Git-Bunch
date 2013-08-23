@@ -17,7 +17,7 @@ my %module_build_args = (
     "Steven Haryanto <stevenharyanto\@gmail.com>"
   ],
   "dist_name" => "Git-Bunch",
-  "dist_version" => "0.29",
+  "dist_version" => "0.30",
   "license" => "perl",
   "module_name" => "Git::Bunch",
   "recommends" => {},
@@ -35,10 +35,13 @@ my %module_build_args = (
     "bin/gitbunch"
   ],
   "test_requires" => {
+    "Capture::Tiny" => 0,
     "File::Slurp::Shortcuts" => 0,
     "File::Which" => 0,
     "Probe::Perl" => 0,
-    "Test::More" => "0.96"
+    "Test::More" => "0.96",
+    "Test::Script" => "1.05",
+    "blib" => 0
   }
 );
 

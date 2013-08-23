@@ -3,15 +3,18 @@ abstract: 'Manage gitbunch directory (directory which contain git repos)'
 author:
   - 'Steven Haryanto <stevenharyanto@gmail.com>'
 build_requires:
+  Capture::Tiny: 0
   File::Slurp::Shortcuts: 0
   File::Which: 0
   Module::Build: 0.3601
   Probe::Perl: 0
   Test::More: 0.96
+  Test::Script: 1.05
+  blib: 0
 configure_requires:
   Module::Build: 0.3601
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 4.300035, CPAN::Meta::Converter version 2.131560'
+generated_by: 'Dist::Zilla version 4.300035, CPAN::Meta::Converter version 2.132140'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -28,4 +31,4 @@ requires:
 resources:
   homepage: http://search.cpan.org/dist/Git-Bunch/
   repository: http://github.com/sharyanto/perl-Git-Bunch
-version: 0.29
+version: 0.30

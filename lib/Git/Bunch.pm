@@ -15,7 +15,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
 
-our $VERSION = '0.29'; # VERSION
+our $VERSION = '0.30'; # VERSION
 
 our %SPEC;
 
@@ -532,6 +532,22 @@ _
                 use_bare => {},
             },
         },
+        backup => {
+            summary     => 'Whether doing backup to target',
+            schema      => ['bool'],
+            description => <<'_',
+
+This setting lets you express that you want to perform synchronizing to a backup
+target, and that you do not do work on the target. Thus, you do not care about
+uncommitted or untracked files/dirs in the target repos (might happen if you
+also do periodic copying of repos to backup using cp/rsync). When this setting
+is turned on, the function will first do a `git clean -f -d` (to delete
+untracked files/dirs) and then `git checkout .` (to discard all uncommitted
+changes). This setting will also implicitly turn on `create_bare` setting
+(unless that setting has been explicitly enabled/disabled).
+
+_
+        },
     },
     deps => {
         all => [
@@ -557,7 +573,10 @@ sub sync_bunch {
     my $source = $args{source};
     my $target = $args{target};
     my $create_bare = $args{create_bare_target};
+    my $backup = $args{backup};
     my $exit;
+
+    $create_bare //= 1 if $backup;
 
     my $cmd;
 
@@ -601,6 +620,7 @@ sub sync_bunch {
             next ENTRY;
         }
 
+        my $created;
         if (!(-e $e)) {
             if ($create_bare) {
                 $log->info("Initializing target repo $e (bare) ...");
@@ -613,6 +633,7 @@ sub sync_bunch {
                     $res{$e} = [500, "git init --bare failed: $exit"];
                     next ENTRY;
                 }
+                $created++;
                 # continue to sync-ing
             } elsif (defined $create_bare) {
                 $log->info("Initializing target repo $e (non-bare) ...");
@@ -625,6 +646,7 @@ sub sync_bunch {
                     $res{$e} = [500, "git init failed: $exit"];
                     next ENTRY;
                 }
+                $created++;
                 # continue to sync-ing
             } else {
                 $progress->update(pos => $i,
@@ -643,6 +665,13 @@ sub sync_bunch {
                 $log->warn("Repo $e copied");
                 next ENTRY;
             }
+        }
+
+        if ($backup && !$created) {
+            $log->debug("Discarding changes in target repo $e ...");
+            local $CWD = $e;
+            system "git clean -f -d && git checkout .";
+            # ignore error for now, let's go ahead and sync anyway
         }
 
         $progress->update(pos => $i, message => "Sync-ing repo $e ...")
@@ -735,7 +764,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.29
+version 0.30
 
 =head1 SYNOPSIS
 
@@ -911,6 +940,19 @@ For all other non-git repos, will simply synchronize by one-way rsync.
 Arguments ('*' denotes required arguments):
 
 =over 4
+
+=item * B<backup> => I<bool>
+
+Whether doing backup to target.
+
+This setting lets you express that you want to perform synchronizing to a backup
+target, and that you do not do work on the target. Thus, you do not care about
+uncommitted or untracked files/dirs in the target repos (might happen if you
+also do periodic copying of repos to backup using cp/rsync). When this setting
+is turned on, the function will first do a C<git clean -f -d> (to delete
+untracked files/dirs) and then C<git checkout .> (to discard all uncommitted
+changes). This setting will also implicitly turn on C<create_bare> setting
+(unless that setting has been explicitly enabled/disabled).
 
 =item * B<create_bare_target> => I<bool>
 
