@@ -4,7 +4,7 @@ use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.31'; # VERSION
+our $VERSION = '0.32'; # VERSION
 
 use Perinci::CmdLine;
 Perinci::CmdLine->new(
@@ -12,7 +12,6 @@ Perinci::CmdLine->new(
     subcommands => {
         check  => { url => '/Git/Bunch/check_bunch'  },
         sync   => { url => '/Git/Bunch/sync_bunch'   },
-        backup => { url => '/Git/Bunch/backup_bunch' },
         exec   => { url => '/Git/Bunch/exec_bunch'   },
     }
 )->run;
@@ -25,7 +24,7 @@ __END__
 
 =pod
 
-=encoding utf-8
+=encoding UTF-8
 
 =head1 NAME
 
@@ -33,7 +32,7 @@ gitbunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.31
+version 0.32
 
 =head1 DESCRIPTION
 
@@ -58,13 +57,29 @@ Or you can customize the level using:
 
 See the documentation for Log::Any::App for more details.
 
+=head1 HOMEPAGE
+
+Please visit the project's homepage at L<https://metacpan.org/release/Git-Bunch>.
+
+=head1 SOURCE
+
+Source repository is at L<https://github.com/sharyanto/perl-Git-Bunch>.
+
+=head1 BUGS
+
+Please report any bugs or feature requests on the bugtracker website L<https://rt.cpan.org/Public/Dist/Display.html?Name=Git-Bunch>
+
+When submitting a bug or request, please include a test-file or a
+patch to an existing test-file that illustrates the bug or desired
+feature.
+
 =head1 AUTHOR
 
 Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by Steven Haryanto.
+This software is copyright (c) 2014 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

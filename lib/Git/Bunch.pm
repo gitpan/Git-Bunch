@@ -3,6 +3,7 @@ package Git::Bunch;
 use 5.010001;
 use strict;
 use warnings;
+use experimental 'smartmatch';
 use Log::Any '$log';
 
 use Builtin::Logged qw(system my_qx);
@@ -13,9 +14,9 @@ use String::ShellQuote;
 
 require Exporter;
 our @ISA       = qw(Exporter);
-our @EXPORT_OK = qw(check_bunch sync_bunch backup_bunch exec_bunch);
+our @EXPORT_OK = qw(check_bunch sync_bunch exec_bunch);
 
-our $VERSION = '0.31'; # VERSION
+our $VERSION = '0.32'; # VERSION
 
 our %SPEC;
 
@@ -61,9 +62,8 @@ our %common_args_spec = (
         schema       => ['bool'],
         description  => <<'_',
 
-This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
-'check_bunch' and 'exec_bunch' already ignore these and only operate on git
-repos.
+This only applies to and `sync_bunch` operations. Operations like `check_bunch`
+and `exec_bunch` already ignore these and only operate on git repos.
 
 _
     },
@@ -72,9 +72,8 @@ _
         schema       => ['bool'],
     description      => <<'_',
 
-This only applies to 'backup_bunch' and 'sync_bunch' operations. Operations like
-'check_bunch' and 'exec_bunch' already ignore these and only operate on git
-repos.
+This only applies to `sync_bunch` operations. Operations like `check_bunch` and
+`exec_bunch` already ignore these and only operate on git repos.
 
 _
     },
@@ -768,7 +767,7 @@ __END__
 
 =pod
 
-=encoding utf-8
+=encoding UTF-8
 
 =head1 NAME
 
@@ -776,7 +775,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.31
+version 0.32
 
 =head1 SYNOPSIS
 
@@ -819,12 +818,10 @@ See also L<File::RsyBak>, which I wrote to backup everything else.
 
 =head1 FUNCTIONS
 
-None of the functions are exported by default, but they are exportable.
-
-
-None are exported by default, but they are exportable.
 
 =head2 check_bunch(%args) -> [status, msg, result, meta]
+
+Check status of git repositories inside gitbunch directory.
 
 Will perform a 'git status' for each git repositories inside the bunch and
 report which repositories are clean/unclean.
@@ -837,43 +834,75 @@ Arguments ('*' denotes required arguments):
 
 =item * B<exclude_files> => I<bool>
 
-Exclude files from processing.
+Check status of git repositories inside gitbunch directory.
 
-This only applies to 'backupI<bunch' and 'sync>bunch' operations. Operations like
-'checkI<bunch' and 'exec>bunch' already ignore these and only operate on git
-repos.
+Will perform a 'git status' for each git repositories inside the bunch and
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
 
 =item * B<exclude_non_git_dirs> => I<bool>
 
-Exclude non-git dirs from processing.
+Check status of git repositories inside gitbunch directory.
 
-This only applies to 'backupI<bunch' and 'sync>bunch' operations. Operations like
-'checkI<bunch' and 'exec>bunch' already ignore these and only operate on git
-repos.
+Will perform a 'git status' for each git repositories inside the bunch and
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
 
 =item * B<exclude_repos> => I<array>
 
-Exclude some repos from processing.
+Check status of git repositories inside gitbunch directory.
+
+Will perform a 'git status' for each git repositories inside the bunch and
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
 
 =item * B<exclude_repos_pat> => I<str>
 
-Specify regex pattern of repos to exclude.
+Check status of git repositories inside gitbunch directory.
+
+Will perform a 'git status' for each git repositories inside the bunch and
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
 
 =item * B<include_repos> => I<array>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
+Check status of git repositories inside gitbunch directory.
+
+Will perform a 'git status' for each git repositories inside the bunch and
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
 
 =item * B<include_repos_pat> => I<str>
 
-Specify regex pattern of repos to include.
+Check status of git repositories inside gitbunch directory.
+
+Will perform a 'git status' for each git repositories inside the bunch and
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
 
 =item * B<sort> => I<str> (default: "-mtime")
 
-Order entries in bunch.
+Check status of git repositories inside gitbunch directory.
+
+Will perform a 'git status' for each git repositories inside the bunch and
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
 
 =item * B<source>* => I<str>
 
-Directory to check.
+Check status of git repositories inside gitbunch directory.
+
+Will perform a 'git status' for each git repositories inside the bunch and
+report which repositories are clean/unclean.
+
+Will die if can't chdir into bunch or git repository.
 
 =back
 
@@ -882,6 +911,8 @@ Return value:
 Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
 
 =head2 exec_bunch(%args) -> [status, msg, result, meta]
+
+Execute a command for each repo in the bunch.
 
 For each git repository in the bunch, will chdir to it and execute specified
 command.
@@ -892,47 +923,66 @@ Arguments ('*' denotes required arguments):
 
 =item * B<command>* => I<str>
 
-Command to execute.
+Execute a command for each repo in the bunch.
+
+For each git repository in the bunch, will chdir to it and execute specified
+command.
 
 =item * B<exclude_files> => I<bool>
 
-Exclude files from processing.
+Execute a command for each repo in the bunch.
 
-This only applies to 'backupI<bunch' and 'sync>bunch' operations. Operations like
-'checkI<bunch' and 'exec>bunch' already ignore these and only operate on git
-repos.
+For each git repository in the bunch, will chdir to it and execute specified
+command.
 
 =item * B<exclude_non_git_dirs> => I<bool>
 
-Exclude non-git dirs from processing.
+Execute a command for each repo in the bunch.
 
-This only applies to 'backupI<bunch' and 'sync>bunch' operations. Operations like
-'checkI<bunch' and 'exec>bunch' already ignore these and only operate on git
-repos.
+For each git repository in the bunch, will chdir to it and execute specified
+command.
 
 =item * B<exclude_repos> => I<array>
 
-Exclude some repos from processing.
+Execute a command for each repo in the bunch.
+
+For each git repository in the bunch, will chdir to it and execute specified
+command.
 
 =item * B<exclude_repos_pat> => I<str>
 
-Specify regex pattern of repos to exclude.
+Execute a command for each repo in the bunch.
+
+For each git repository in the bunch, will chdir to it and execute specified
+command.
 
 =item * B<include_repos> => I<array>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
+Execute a command for each repo in the bunch.
+
+For each git repository in the bunch, will chdir to it and execute specified
+command.
 
 =item * B<include_repos_pat> => I<str>
 
-Specify regex pattern of repos to include.
+Execute a command for each repo in the bunch.
+
+For each git repository in the bunch, will chdir to it and execute specified
+command.
 
 =item * B<sort> => I<str> (default: "-mtime")
 
-Order entries in bunch.
+Execute a command for each repo in the bunch.
+
+For each git repository in the bunch, will chdir to it and execute specified
+command.
 
 =item * B<source>* => I<str>
 
-Directory to check.
+Execute a command for each repo in the bunch.
+
+For each git repository in the bunch, will chdir to it and execute specified
+command.
 
 =back
 
@@ -941,6 +991,8 @@ Return value:
 Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
 
 =head2 sync_bunch(%args) -> [status, msg, result, meta]
+
+Synchronize bunch to another bunch.
 
 For each git repository in the bunch, will perform a 'git pull/push' for each
 branch. If repository in destination doesn't exist, it will be rsync-ed first
@@ -955,90 +1007,146 @@ Arguments ('*' denotes required arguments):
 
 =item * B<backup> => I<bool>
 
-Whether doing backup to target.
+Synchronize bunch to another bunch.
 
-This setting lets you express that you want to perform synchronizing to a backup
-target, and that you do not do work on the target. Thus, you do not care about
-uncommitted or untracked files/dirs in the target repos (might happen if you
-also do periodic copying of repos to backup using cp/rsync). When this setting
-is turned on, the function will first do a C<git clean -f -d> (to delete
-untracked files/dirs) and then C<git checkout .> (to discard all uncommitted
-changes). This setting will also implicitly turn on C<create_bare> setting
-(unless that setting has been explicitly enabled/disabled).
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<create_bare_target> => I<bool>
 
-Whether to create bare git repo when target does not exist.
+Synchronize bunch to another bunch.
 
-When target repo does not exist, gitbunch can either copy the source repo using
-C<rsync> (the default, if this setting is undefined), or it can create target
-repo with C<git init --bare> (if this setting is set to 1), or it can create
-target repo with C<git init> (if this setting is set to 0).
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
 
-Bare git repositories contain only contents of the .git folder inside the
-directory and no working copies of your source files.
-
-Creating bare repos are apt for backup purposes since they are more
-space-efficient.
-
-Non-repos will still be copied/rsync-ed.
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<delete_branch> => I<bool> (default: 0)
 
-Whether to delete branches in dest repos not existing in source repos.
+Synchronize bunch to another bunch.
+
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<exclude_files> => I<bool>
 
-Exclude files from processing.
+Synchronize bunch to another bunch.
 
-This only applies to 'backupI<bunch' and 'sync>bunch' operations. Operations like
-'checkI<bunch' and 'exec>bunch' already ignore these and only operate on git
-repos.
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<exclude_non_git_dirs> => I<bool>
 
-Exclude non-git dirs from processing.
+Synchronize bunch to another bunch.
 
-This only applies to 'backupI<bunch' and 'sync>bunch' operations. Operations like
-'checkI<bunch' and 'exec>bunch' already ignore these and only operate on git
-repos.
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<exclude_repos> => I<array>
 
-Exclude some repos from processing.
+Synchronize bunch to another bunch.
+
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<exclude_repos_pat> => I<str>
 
-Specify regex pattern of repos to exclude.
+Synchronize bunch to another bunch.
+
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<include_repos> => I<array>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
+Synchronize bunch to another bunch.
+
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<include_repos_pat> => I<str>
 
-Specify regex pattern of repos to include.
+Synchronize bunch to another bunch.
+
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<rsync_opt_maintain_ownership> => I<bool> (default: 0)
 
-Whether or not, when rsync-ing from source, we use -a (= -rlptgoD) or -rlptD (-a minus -go).
+Synchronize bunch to another bunch.
 
-Sometimes using -a results in failure to preserve permission modes on
-sshfs-mounted filesystem, while -rlptD succeeds, so by default we don't maintain
-ownership. If you need to maintain ownership (e.g. you run as root and the repos
-are not owned by root), turn this option on.
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<sort> => I<str> (default: "-mtime")
 
-Order entries in bunch.
+Synchronize bunch to another bunch.
+
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<source>* => I<str>
 
-Directory to check.
+Synchronize bunch to another bunch.
+
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =item * B<target>* => I<str>
 
-Destination bunch.
+Synchronize bunch to another bunch.
+
+For each git repository in the bunch, will perform a 'git pull/push' for each
+branch. If repository in destination doesn't exist, it will be rsync-ed first
+from source. When 'git pull' fails, will exit to let you fix the problem
+manually.
+
+For all other non-git repos, will simply synchronize by one-way rsync.
 
 =back
 
@@ -1053,6 +1161,11 @@ Returns an enveloped result (an array). First element (status) is an integer con
 =over 4
 
 =item * Can't handle bare source repos
+
+=item * Sync-ing to bare repos (e.g. with --backup) still produces error messages
+
+Although the sync process succeeds, the error messages (like C<< fatal: Not a
+git repository >>) might be confusing.
 
 =back
 
@@ -1069,13 +1182,29 @@ repositories which have uncommitted changes; 2) synchronize (pull/push) to other
 locations. I put all my data in one big gitbunch directory; I find it simpler.
 Git::Bunch works for me and I use it daily.
 
+=head1 HOMEPAGE
+
+Please visit the project's homepage at L<https://metacpan.org/release/Git-Bunch>.
+
+=head1 SOURCE
+
+Source repository is at L<https://github.com/sharyanto/perl-Git-Bunch>.
+
+=head1 BUGS
+
+Please report any bugs or feature requests on the bugtracker website L<https://rt.cpan.org/Public/Dist/Display.html?Name=Git-Bunch>
+
+When submitting a bug or request, please include a test-file or a
+patch to an existing test-file that illustrates the bug or desired
+feature.
+
 =head1 AUTHOR
 
 Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by Steven Haryanto.
+This software is copyright (c) 2014 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
