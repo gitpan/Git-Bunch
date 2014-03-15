@@ -4,7 +4,7 @@ use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.32'; # VERSION
+our $VERSION = '0.33'; # VERSION
 
 use Perinci::CmdLine;
 Perinci::CmdLine->new(
@@ -32,7 +32,7 @@ gitbunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-version 0.32
+version 0.33
 
 =head1 DESCRIPTION
 

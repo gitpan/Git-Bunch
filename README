@@ -3,7 +3,7 @@ NAME
     repos)
 
 VERSION
-    version 0.32
+    version 0.33
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -56,75 +56,44 @@ FUNCTIONS
 
     *   exclude_files => *bool*
 
-        Check status of git repositories inside gitbunch directory.
+        Exclude files from processing.
 
-        Will perform a 'git status' for each git repositories inside the
-        bunch and report which repositories are clean/unclean.
-
-        Will die if can't chdir into bunch or git repository.
+        This only applies to "sync_bunch" operations. Operations like
+        "check_bunch" and "exec_bunch" already ignore these and only operate
+        on git repos.
 
     *   exclude_non_git_dirs => *bool*
 
-        Check status of git repositories inside gitbunch directory.
+        Exclude non-git dirs from processing.
 
-        Will perform a 'git status' for each git repositories inside the
-        bunch and report which repositories are clean/unclean.
-
-        Will die if can't chdir into bunch or git repository.
+        This only applies to and "sync_bunch" operations. Operations like
+        "check_bunch" and "exec_bunch" already ignore these and only operate
+        on git repos.
 
     *   exclude_repos => *array*
 
-        Check status of git repositories inside gitbunch directory.
-
-        Will perform a 'git status' for each git repositories inside the
-        bunch and report which repositories are clean/unclean.
-
-        Will die if can't chdir into bunch or git repository.
+        Exclude some repos from processing.
 
     *   exclude_repos_pat => *str*
 
-        Check status of git repositories inside gitbunch directory.
-
-        Will perform a 'git status' for each git repositories inside the
-        bunch and report which repositories are clean/unclean.
-
-        Will die if can't chdir into bunch or git repository.
+        Specify regex pattern of repos to exclude.
 
     *   include_repos => *array*
 
-        Check status of git repositories inside gitbunch directory.
-
-        Will perform a 'git status' for each git repositories inside the
-        bunch and report which repositories are clean/unclean.
-
-        Will die if can't chdir into bunch or git repository.
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
 
     *   include_repos_pat => *str*
 
-        Check status of git repositories inside gitbunch directory.
-
-        Will perform a 'git status' for each git repositories inside the
-        bunch and report which repositories are clean/unclean.
-
-        Will die if can't chdir into bunch or git repository.
+        Specify regex pattern of repos to include.
 
     *   sort => *str* (default: "-mtime")
 
-        Check status of git repositories inside gitbunch directory.
-
-        Will perform a 'git status' for each git repositories inside the
-        bunch and report which repositories are clean/unclean.
-
-        Will die if can't chdir into bunch or git repository.
+        Order entries in bunch.
 
     *   source* => *str*
 
-        Check status of git repositories inside gitbunch directory.
-
-        Will perform a 'git status' for each git repositories inside the
-        bunch and report which repositories are clean/unclean.
-
-        Will die if can't chdir into bunch or git repository.
+        Directory to check.
 
     Return value:
 
@@ -145,66 +114,48 @@ FUNCTIONS
 
     *   command* => *str*
 
-        Execute a command for each repo in the bunch.
-
-        For each git repository in the bunch, will chdir to it and execute
-        specified command.
+        Command to execute.
 
     *   exclude_files => *bool*
 
-        Execute a command for each repo in the bunch.
+        Exclude files from processing.
 
-        For each git repository in the bunch, will chdir to it and execute
-        specified command.
+        This only applies to "sync_bunch" operations. Operations like
+        "check_bunch" and "exec_bunch" already ignore these and only operate
+        on git repos.
 
     *   exclude_non_git_dirs => *bool*
 
-        Execute a command for each repo in the bunch.
+        Exclude non-git dirs from processing.
 
-        For each git repository in the bunch, will chdir to it and execute
-        specified command.
+        This only applies to and "sync_bunch" operations. Operations like
+        "check_bunch" and "exec_bunch" already ignore these and only operate
+        on git repos.
 
     *   exclude_repos => *array*
 
-        Execute a command for each repo in the bunch.
-
-        For each git repository in the bunch, will chdir to it and execute
-        specified command.
+        Exclude some repos from processing.
 
     *   exclude_repos_pat => *str*
 
-        Execute a command for each repo in the bunch.
-
-        For each git repository in the bunch, will chdir to it and execute
-        specified command.
+        Specify regex pattern of repos to exclude.
 
     *   include_repos => *array*
 
-        Execute a command for each repo in the bunch.
-
-        For each git repository in the bunch, will chdir to it and execute
-        specified command.
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
 
     *   include_repos_pat => *str*
 
-        Execute a command for each repo in the bunch.
-
-        For each git repository in the bunch, will chdir to it and execute
-        specified command.
+        Specify regex pattern of repos to include.
 
     *   sort => *str* (default: "-mtime")
 
-        Execute a command for each repo in the bunch.
-
-        For each git repository in the bunch, will chdir to it and execute
-        specified command.
+        Order entries in bunch.
 
     *   source* => *str*
 
-        Execute a command for each repo in the bunch.
-
-        For each git repository in the bunch, will chdir to it and execute
-        specified command.
+        Directory to check.
 
     Return value:
 
@@ -229,159 +180,96 @@ FUNCTIONS
 
     *   backup => *bool*
 
-        Synchronize bunch to another bunch.
+        Whether doing backup to target.
 
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        This setting lets you express that you want to perform synchronizing
+        to a backup target, and that you do not do work on the target. Thus,
+        you do not care about uncommitted or untracked files/dirs in the
+        target repos (might happen if you also do periodic copying of repos
+        to backup using cp/rsync). When this setting is turned on, the
+        function will first do a "git clean -f -d" (to delete untracked
+        files/dirs) and then "git checkout ." (to discard all uncommitted
+        changes). This setting will also implicitly turn on "create_bare"
+        setting (unless that setting has been explicitly enabled/disabled).
 
     *   create_bare_target => *bool*
 
-        Synchronize bunch to another bunch.
+        Whether to create bare git repo when target does not exist.
 
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
+        When target repo does not exist, gitbunch can either copy the source
+        repo using "rsync" (the default, if this setting is undefined), or
+        it can create target repo with "git init --bare" (if this setting is
+        set to 1), or it can create target repo with "git init" (if this
+        setting is set to 0).
 
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        Bare git repositories contain only contents of the .git folder
+        inside the directory and no working copies of your source files.
+
+        Creating bare repos are apt for backup purposes since they are more
+        space-efficient.
+
+        Non-repos will still be copied/rsync-ed.
 
     *   delete_branch => *bool* (default: 0)
 
-        Synchronize bunch to another bunch.
-
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        Whether to delete branches in dest repos not existing in source
+        repos.
 
     *   exclude_files => *bool*
 
-        Synchronize bunch to another bunch.
+        Exclude files from processing.
 
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        This only applies to "sync_bunch" operations. Operations like
+        "check_bunch" and "exec_bunch" already ignore these and only operate
+        on git repos.
 
     *   exclude_non_git_dirs => *bool*
 
-        Synchronize bunch to another bunch.
+        Exclude non-git dirs from processing.
 
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        This only applies to and "sync_bunch" operations. Operations like
+        "check_bunch" and "exec_bunch" already ignore these and only operate
+        on git repos.
 
     *   exclude_repos => *array*
 
-        Synchronize bunch to another bunch.
-
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        Exclude some repos from processing.
 
     *   exclude_repos_pat => *str*
 
-        Synchronize bunch to another bunch.
-
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        Specify regex pattern of repos to exclude.
 
     *   include_repos => *array*
 
-        Synchronize bunch to another bunch.
-
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        Specific git repos to sync, if not specified all repos in the bunch
+        will be processed.
 
     *   include_repos_pat => *str*
 
-        Synchronize bunch to another bunch.
-
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        Specify regex pattern of repos to include.
 
     *   rsync_opt_maintain_ownership => *bool* (default: 0)
 
-        Synchronize bunch to another bunch.
+        Whether or not, when rsync-ing from source, we use -a (= -rlptgoD)
+        or -rlptD (-a minus -go).
 
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        Sometimes using -a results in failure to preserve permission modes
+        on sshfs-mounted filesystem, while -rlptD succeeds, so by default we
+        don't maintain ownership. If you need to maintain ownership (e.g.
+        you run as root and the repos are not owned by root), turn this
+        option on.
 
     *   sort => *str* (default: "-mtime")
 
-        Synchronize bunch to another bunch.
-
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        Order entries in bunch.
 
     *   source* => *str*
 
-        Synchronize bunch to another bunch.
-
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        Directory to check.
 
     *   target* => *str*
 
-        Synchronize bunch to another bunch.
-
-        For each git repository in the bunch, will perform a 'git pull/push'
-        for each branch. If repository in destination doesn't exist, it will
-        be rsync-ed first from source. When 'git pull' fails, will exit to
-        let you fix the problem manually.
-
-        For all other non-git repos, will simply synchronize by one-way
-        rsync.
+        Destination bunch.
 
     Return value:
 
