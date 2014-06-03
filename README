@@ -3,8 +3,8 @@ NAME
     repos)
 
 VERSION
-    This document describes version 0.34 of Git::Bunch (from Perl
-    distribution Git-Bunch), released on 2014-05-17.
+    This document describes version 0.35 of Git::Bunch (from Perl
+    distribution Git-Bunch), released on 2014-06-02.
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -88,9 +88,16 @@ FUNCTIONS
 
         Specify regex pattern of repos to include.
 
-    *   sort => *str* (default: "-mtime")
+    *   sort => *str* (default: "-commit-timestamp")
 
         Order entries in bunch.
+
+        "commit-timestamp" (and "-commit-timestamp") compares the timestamp
+        of ".git/commit-timestamp" file in each repo. Repos or dirs not
+        having this file will be processed later. You can touch these
+        ".git/commit-timestamp" files in your post-commit script, for
+        example. This allows sorting recently committed repos more cheaply
+        (compared to doing "git log -1").
 
     *   source* => *str*
 
@@ -152,9 +159,16 @@ FUNCTIONS
 
         Specify regex pattern of repos to include.
 
-    *   sort => *str* (default: "-mtime")
+    *   sort => *str* (default: "-commit-timestamp")
 
         Order entries in bunch.
+
+        "commit-timestamp" (and "-commit-timestamp") compares the timestamp
+        of ".git/commit-timestamp" file in each repo. Repos or dirs not
+        having this file will be processed later. You can touch these
+        ".git/commit-timestamp" files in your post-commit script, for
+        example. This allows sorting recently committed repos more cheaply
+        (compared to doing "git log -1").
 
     *   source* => *str*
 
@@ -264,9 +278,16 @@ FUNCTIONS
         you run as root and the repos are not owned by root), turn this
         option on.
 
-    *   sort => *str* (default: "-mtime")
+    *   sort => *str* (default: "-commit-timestamp")
 
         Order entries in bunch.
+
+        "commit-timestamp" (and "-commit-timestamp") compares the timestamp
+        of ".git/commit-timestamp" file in each repo. Repos or dirs not
+        having this file will be processed later. You can touch these
+        ".git/commit-timestamp" files in your post-commit script, for
+        example. This allows sorting recently committed repos more cheaply
+        (compared to doing "git log -1").
 
     *   source* => *str*
 

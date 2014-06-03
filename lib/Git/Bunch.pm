@@ -16,7 +16,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch exec_bunch);
 
-our $VERSION = '0.34'; # VERSION
+our $VERSION = '0.35'; # VERSION
 
 our %SPEC;
 
@@ -34,9 +34,20 @@ our %common_args_spec = (
     },
     sort             => {
         summary      => 'Order entries in bunch',
+        description  => <<'_',
+
+`commit-timestamp` (and `-commit-timestamp`) compares the timestamp of
+`.git/commit-timestamp` file in each repo. Repos or dirs not having this file
+will be processed later. You can touch these `.git/commit-timestamp` files in
+your post-commit script, for example. This allows sorting recently committed
+repos more cheaply (compared to doing `git log -1`).
+
+_
         schema       => ['str' => {
-            default => '-mtime',
-            in      => [qw/name -name mtime -mtime rand/],
+            default => '-commit-timestamp',
+            in      => [qw/name -name mtime -mtime rand
+                           commit-timestamp -commit-timestamp
+                          /],
         }],
     },
     include_repos    => {
@@ -141,6 +152,17 @@ sub _check_common_args {
         $sortsub = sub {$b cmp $a};
     } elsif ($sort eq 'name') {
         $sortsub = sub {$a cmp $b};
+    } elsif ($sort =~ /^(-)commit-timestamp$/) {
+        my $rev = $1;
+        $sortsub = sub {
+            my $ts_file = ".git/.commit-timestamp";
+            my $ts_a = (-M "$a/$ts_file");
+            my $ts_b = (-M "$b/$ts_file");
+            return  0 if !$ts_a && !$ts_b;
+            return  1 if !$ts_a;
+            return -1 if !$ts_b;
+            return $ts_a <=> $ts_b;
+        };
     } else { # rand
         $sortsub = sub {int(3*rand())-1};
     }
@@ -775,7 +797,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-This document describes version 0.34 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-05-17.
+This document describes version 0.35 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-06-02.
 
 =head1 SYNOPSIS
 
@@ -862,9 +884,15 @@ Specific git repos to sync, if not specified all repos in the bunch will be proc
 
 Specify regex pattern of repos to include.
 
-=item * B<sort> => I<str> (default: "-mtime")
+=item * B<sort> => I<str> (default: "-commit-timestamp")
 
 Order entries in bunch.
+
+C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
+C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
+will be processed later. You can touch these C<.git/commit-timestamp> files in
+your post-commit script, for example. This allows sorting recently committed
+repos more cheaply (compared to doing C<git log -1>).
 
 =item * B<source>* => I<str>
 
@@ -929,9 +957,15 @@ Specific git repos to sync, if not specified all repos in the bunch will be proc
 
 Specify regex pattern of repos to include.
 
-=item * B<sort> => I<str> (default: "-mtime")
+=item * B<sort> => I<str> (default: "-commit-timestamp")
 
 Order entries in bunch.
+
+C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
+C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
+will be processed later. You can touch these C<.git/commit-timestamp> files in
+your post-commit script, for example. This allows sorting recently committed
+repos more cheaply (compared to doing C<git log -1>).
 
 =item * B<source>* => I<str>
 
@@ -1039,9 +1073,15 @@ sshfs-mounted filesystem, while -rlptD succeeds, so by default we don't maintain
 ownership. If you need to maintain ownership (e.g. you run as root and the repos
 are not owned by root), turn this option on.
 
-=item * B<sort> => I<str> (default: "-mtime")
+=item * B<sort> => I<str> (default: "-commit-timestamp")
 
 Order entries in bunch.
+
+C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
+C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
+will be processed later. You can touch these C<.git/commit-timestamp> files in
+your post-commit script, for example. This allows sorting recently committed
+repos more cheaply (compared to doing C<git log -1>).
 
 =item * B<source>* => I<str>
 
