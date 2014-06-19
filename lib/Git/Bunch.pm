@@ -16,7 +16,8 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch exec_bunch);
 
-our $VERSION = '0.35'; # VERSION
+our $VERSION = '0.36'; # VERSION
+our $DATE = '2014-06-19'; # DATE
 
 our %SPEC;
 
@@ -284,6 +285,7 @@ sub check_bunch {
     local $CWD = $source;
 
     my @entries = sort $sortsub grep {-d} <*>;
+    #$log->tracef("entries: %s", \@entries);
 
     my $i = 0;
     $progress->pos(0) if $progress;
@@ -614,7 +616,12 @@ sub sync_bunch {
     my $a = $args{rsync_opt_maintain_ownership} ? "aH" : "rlptDH";
 
     my @entries;
-    opendir my($d), $source; @entries = sort $sortsub readdir($d);
+    {
+        local $CWD = $source;
+        opendir my($d), ".";
+        @entries = sort $sortsub readdir($d);
+    }
+    #$log->tracef("entries: %s", \@entries);
 
     $source = Cwd::abs_path($source);
     local $CWD = $target;
@@ -760,8 +767,10 @@ sub exec_bunch {
     local $CWD = $source;
     my %res;
     my $i = 0;
+    my @entries = sort $sortsub grep {-d} <*>;
+    #$log->tracef("entries: %s", \@entries);
   REPO:
-    for my $repo (sort $sortsub grep {-d} <*>) {
+    for my $repo (@entries) {
         $CWD = $i++ ? "../$repo" : $repo;
         next REPO if _skip_process_repo($repo, \%args, ".");
         $log->info("Executing command on $repo ...");
@@ -797,7 +806,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-This document describes version 0.35 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-06-02.
+This document describes version 0.36 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-06-19.
 
 =head1 SYNOPSIS
 
