@@ -3,8 +3,8 @@ NAME
     repos)
 
 VERSION
-    This document describes version 0.36 of Git::Bunch (from Perl
-    distribution Git-Bunch), released on 2014-06-19.
+    This document describes version 0.37 of Git::Bunch (from Perl
+    distribution Git-Bunch), released on 2014-06-21.
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo

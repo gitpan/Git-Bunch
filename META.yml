@@ -34,7 +34,7 @@ resources:
   bugtracker: https://rt.cpan.org/Public/Dist/Display.html?Name=Git-Bunch
   homepage: https://metacpan.org/release/Git-Bunch
   repository: git://github.com/sharyanto/perl-Git-Bunch.git
-version: '0.36'
+version: '0.37'
 x_Dist_Zilla:
   perl:
     version: '5.018001'

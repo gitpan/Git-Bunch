@@ -16,8 +16,8 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch exec_bunch);
 
-our $VERSION = '0.36'; # VERSION
-our $DATE = '2014-06-19'; # DATE
+our $VERSION = '0.37'; # VERSION
+our $DATE = '2014-06-21'; # DATE
 
 our %SPEC;
 
@@ -450,6 +450,7 @@ sub _sync_repo {
                                  ^Merge \s made \s by \s recursive|
                                  ^Merge \s made \s by \s the \s 'recursive'|
                                 /mx) {
+            system "touch", "$dest/$repo/.git/.commit-timestamp";
             $log->warn("Branch $branch of repo $repo updated")
                 if @src_branches > 1;
             $log->warn("Repo $repo updated")
@@ -702,6 +703,7 @@ sub sync_bunch {
                 } else {
                     $res{$e} = [200, "rsync-ed"];
                 }
+                system "touch", "$e/.git/.commit-timestamp";
                 $log->warn("Repo $e copied");
                 next ENTRY;
             }
@@ -806,7 +808,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-This document describes version 0.36 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-06-19.
+This document describes version 0.37 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-06-21.
 
 =head1 SYNOPSIS
 

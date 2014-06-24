@@ -65,7 +65,7 @@
          "web" : "https://github.com/sharyanto/perl-Git-Bunch"
       }
    },
-   "version" : "0.36",
+   "version" : "0.37",
    "x_Dist_Zilla" : {
       "perl" : {
          "version" : "5.018001"
