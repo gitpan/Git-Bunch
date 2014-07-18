@@ -3,8 +3,8 @@ NAME
     repos)
 
 VERSION
-    This document describes version 0.37 of Git::Bunch (from Perl
-    distribution Git-Bunch), released on 2014-06-21.
+    This document describes version 0.38 of Git::Bunch (from Perl
+    distribution Git-Bunch), released on 2014-07-18.
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -88,6 +88,10 @@ FUNCTIONS
 
         Specify regex pattern of repos to include.
 
+    *   repo => *str*
+
+        Only process a single repo.
+
     *   sort => *str* (default: "-commit-timestamp")
 
         Order entries in bunch.
@@ -158,6 +162,10 @@ FUNCTIONS
     *   include_repos_pat => *str*
 
         Specify regex pattern of repos to include.
+
+    *   repo => *str*
+
+        Only process a single repo.
 
     *   sort => *str* (default: "-commit-timestamp")
 
@@ -266,6 +274,10 @@ FUNCTIONS
     *   include_repos_pat => *str*
 
         Specify regex pattern of repos to include.
+
+    *   repo => *str*
+
+        Only process a single repo.
 
     *   rsync_opt_maintain_ownership => *bool* (default: 0)
 

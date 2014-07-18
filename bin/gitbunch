@@ -1,10 +1,10 @@
-#!/usr/bin/perl
+#!perl
 
 use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.37'; # VERSION
+our $VERSION = '0.38'; # VERSION
 
 use Perinci::CmdLine;
 Perinci::CmdLine->new(
@@ -32,7 +32,7 @@ gitbunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-This document describes version 0.37 of gitbunch (from Perl distribution Git-Bunch), released on 2014-06-21.
+This document describes version 0.38 of gitbunch (from Perl distribution Git-Bunch), released on 2014-07-18.
 
 =head1 DESCRIPTION
 

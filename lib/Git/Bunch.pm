@@ -16,8 +16,8 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch exec_bunch);
 
-our $VERSION = '0.37'; # VERSION
-our $DATE = '2014-06-21'; # DATE
+our $VERSION = '0.38'; # VERSION
+our $DATE = '2014-07-18'; # DATE
 
 our %SPEC;
 
@@ -57,10 +57,13 @@ _
         schema       => ['array' => {
             of => 'str*',
         }],
-        cmdline_aliases => {
-            repos => {},
-        },
     },
+    repo             => {
+        summary      => 'Only process a single repo',
+        schema       => 'str*',
+    },
+    # XXX option to only process a single non-git dir?
+    # XXX option to only process a single file?
     include_repos_pat=> {
         summary      => 'Specify regex pattern of repos to include',
         schema       => ['str'],
@@ -187,6 +190,14 @@ sub _skip_process_entry {
     return 1 if $e eq '.' || $e eq '..';
     my $is_repo = _is_repo($dir);
 
+    if (defined $args->{repo}) {
+        # avoid logging all the skipped messages if user just wants to process a
+        # single repo
+        return 1 unless $is_repo;
+        return 1 unless $args->{repo} eq $e;
+        return 0;
+    }
+
     if ($skip_non_repo && !$is_repo) {
         $log->warn("Skipped $e (not a git repo), ".
                        "please remove it or rename to .$e");
@@ -220,7 +231,7 @@ sub _skip_process_entry {
         $log->debug("Skipped $e (exclude_non_git_dirs)");
         return 1;
     }
-    return;
+    return 0;
 }
 
 sub _skip_process_repo {
@@ -808,7 +819,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-This document describes version 0.37 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-06-21.
+This document describes version 0.38 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-07-18.
 
 =head1 SYNOPSIS
 
@@ -895,6 +906,10 @@ Specific git repos to sync, if not specified all repos in the bunch will be proc
 
 Specify regex pattern of repos to include.
 
+=item * B<repo> => I<str>
+
+Only process a single repo.
+
 =item * B<sort> => I<str> (default: "-commit-timestamp")
 
 Order entries in bunch.
@@ -967,6 +982,10 @@ Specific git repos to sync, if not specified all repos in the bunch will be proc
 =item * B<include_repos_pat> => I<str>
 
 Specify regex pattern of repos to include.
+
+=item * B<repo> => I<str>
+
+Only process a single repo.
 
 =item * B<sort> => I<str> (default: "-commit-timestamp")
 
@@ -1074,6 +1093,10 @@ Specific git repos to sync, if not specified all repos in the bunch will be proc
 =item * B<include_repos_pat> => I<str>
 
 Specify regex pattern of repos to include.
+
+=item * B<repo> => I<str>
+
+Only process a single repo.
 
 =item * B<rsync_opt_maintain_ownership> => I<bool> (default: 0)
 
