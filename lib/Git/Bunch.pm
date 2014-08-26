@@ -16,8 +16,8 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch exec_bunch);
 
-our $VERSION = '0.39'; # VERSION
-our $DATE = '2014-08-23'; # DATE
+our $VERSION = '0.40'; # VERSION
+our $DATE = '2014-08-24'; # DATE
 
 our %SPEC;
 
@@ -350,7 +350,7 @@ sub check_bunch {
     [200,
      $has_unclean ? "Some repos unclean" : "All repos clean",
      \%res,
-     {"cmdline_result" => ''}];
+     {"cmdline.result" => ''}];
 }
 
 sub _sync_repo {
@@ -819,7 +819,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-This document describes version 0.39 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-08-23.
+This document describes version 0.40 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-08-24.
 
 =head1 SYNOPSIS
 
