@@ -16,8 +16,8 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch exec_bunch);
 
-our $VERSION = '0.38'; # VERSION
-our $DATE = '2014-07-18'; # DATE
+our $VERSION = '0.39'; # VERSION
+our $DATE = '2014-08-23'; # DATE
 
 our %SPEC;
 
@@ -350,7 +350,7 @@ sub check_bunch {
     [200,
      $has_unclean ? "Some repos unclean" : "All repos clean",
      \%res,
-     {"cmdline.display_result" => 0}];
+     {"cmdline_result" => ''}];
 }
 
 sub _sync_repo {
@@ -740,7 +740,7 @@ sub sync_bunch {
     [200,
      "OK",
      \%res,
-     {"cmdline.display_result" => 0}];
+     {"cmdline.result" => ''}];
 }
 
 $SPEC{exec_bunch} = {
@@ -801,7 +801,7 @@ sub exec_bunch {
     [200,
      "OK",
      \%res,
-     {"cmdline.display_result" => 0}];
+     {"cmdline.result" => ''}];
 }
 
 1;
@@ -819,7 +819,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-This document describes version 0.38 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-07-18.
+This document describes version 0.39 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-08-23.
 
 =head1 SYNOPSIS
 
@@ -914,9 +914,9 @@ Only process a single repo.
 
 Order entries in bunch.
 
-C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
-C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
-will be processed later. You can touch these C<.git/commit-timestamp> files in
+C<commit-timestamp> (and C&lt;-commit-timestamp>) compares the timestamp of
+C&lt;.git/commit-timestamp> file in each repo. Repos or dirs not having this file
+will be processed later. You can touch these C&lt;.git/commit-timestamp> files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing C<git log -1>).
 
@@ -936,6 +936,8 @@ First element (status) is an integer containing HTTP status code
 200. Third element (result) is optional, the actual result. Fourth
 element (meta) is called result metadata and is optional, a hash
 that contains extra information.
+
+ (any)
 
 
 =head2 exec_bunch(%args) -> [status, msg, result, meta]
@@ -991,9 +993,9 @@ Only process a single repo.
 
 Order entries in bunch.
 
-C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
-C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
-will be processed later. You can touch these C<.git/commit-timestamp> files in
+C<commit-timestamp> (and C&lt;-commit-timestamp>) compares the timestamp of
+C&lt;.git/commit-timestamp> file in each repo. Repos or dirs not having this file
+will be processed later. You can touch these C&lt;.git/commit-timestamp> files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing C<git log -1>).
 
@@ -1013,6 +1015,8 @@ First element (status) is an integer containing HTTP status code
 200. Third element (result) is optional, the actual result. Fourth
 element (meta) is called result metadata and is optional, a hash
 that contains extra information.
+
+ (any)
 
 
 =head2 sync_bunch(%args) -> [status, msg, result, meta]
@@ -1111,9 +1115,9 @@ are not owned by root), turn this option on.
 
 Order entries in bunch.
 
-C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
-C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
-will be processed later. You can touch these C<.git/commit-timestamp> files in
+C<commit-timestamp> (and C&lt;-commit-timestamp>) compares the timestamp of
+C&lt;.git/commit-timestamp> file in each repo. Repos or dirs not having this file
+will be processed later. You can touch these C&lt;.git/commit-timestamp> files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing C<git log -1>).
 
@@ -1137,6 +1141,8 @@ First element (status) is an integer containing HTTP status code
 200. Third element (result) is optional, the actual result. Fourth
 element (meta) is called result metadata and is optional, a hash
 that contains extra information.
+
+ (any)
 
 =head1 FAQ
 

@@ -13,7 +13,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: '6.30'
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 5.019, CPAN::Meta::Converter version 2.141170'
+generated_by: 'Dist::Zilla version 5.019, CPAN::Meta::Converter version 2.141520'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -24,7 +24,7 @@ requires:
   Capture::Tiny: '0'
   File::chdir: '0'
   Log::Any: '0'
-  Perinci::CmdLine: '0.79'
+  Perinci::CmdLine: '1.19'
   Rinci: v1.1.14
   String::ShellQuote: '0'
   UUID::Random: '0'
@@ -34,7 +34,7 @@ resources:
   bugtracker: https://rt.cpan.org/Public/Dist/Display.html?Name=Git-Bunch
   homepage: https://metacpan.org/release/Git-Bunch
   repository: git://github.com/sharyanto/perl-Git-Bunch.git
-version: '0.38'
+version: '0.39'
 x_Dist_Zilla:
   perl:
     version: '5.018002'
@@ -229,6 +229,10 @@ x_Dist_Zilla:
       name: '@Author::SHARYANTO/Rinci::Validate'
       version: '0.14'
     -
+      class: Dist::Zilla::Plugin::SetScriptShebang
+      name: '@Author::SHARYANTO/SetScriptShebang'
+      version: '0.01'
+    -
       class: Dist::Zilla::Plugin::SHARYANTO::OurPkgVersion
       name: '@Author::SHARYANTO/SHARYANTO::OurPkgVersion'
       version: '0.02'
@@ -242,7 +246,7 @@ x_Dist_Zilla:
           script_finder:
             - ':ExecFiles'
       name: '@Author::SHARYANTO/Test::Compile'
-      version: '2.040'
+      version: '2.043'
     -
       class: Dist::Zilla::Plugin::Test::Rinci
       name: '@Author::SHARYANTO/Test::Rinci'

@@ -3,8 +3,8 @@ NAME
     repos)
 
 VERSION
-    This document describes version 0.38 of Git::Bunch (from Perl
-    distribution Git-Bunch), released on 2014-07-18.
+    This document describes version 0.39 of Git::Bunch (from Perl
+    distribution Git-Bunch), released on 2014-08-23.
 
 SYNOPSIS
     To check the status of bunch (will do a 'git status' for each git repo
@@ -96,12 +96,12 @@ FUNCTIONS
 
         Order entries in bunch.
 
-        "commit-timestamp" (and "-commit-timestamp") compares the timestamp
-        of ".git/commit-timestamp" file in each repo. Repos or dirs not
-        having this file will be processed later. You can touch these
-        ".git/commit-timestamp" files in your post-commit script, for
-        example. This allows sorting recently committed repos more cheaply
-        (compared to doing "git log -1").
+        "commit-timestamp" (and C&lt;-commit-timestamp>) compares the
+        timestamp of C&lt;.git/commit-timestamp> file in each repo. Repos or
+        dirs not having this file will be processed later. You can touch
+        these C&lt;.git/commit-timestamp> files in your post-commit script,
+        for example. This allows sorting recently committed repos more
+        cheaply (compared to doing "git log -1").
 
     *   source* => *str*
 
@@ -117,6 +117,8 @@ FUNCTIONS
     element (result) is optional, the actual result. Fourth element (meta)
     is called result metadata and is optional, a hash that contains extra
     information.
+
+     (any)
 
   exec_bunch(%args) -> [status, msg, result, meta]
     Execute a command for each repo in the bunch.
@@ -171,12 +173,12 @@ FUNCTIONS
 
         Order entries in bunch.
 
-        "commit-timestamp" (and "-commit-timestamp") compares the timestamp
-        of ".git/commit-timestamp" file in each repo. Repos or dirs not
-        having this file will be processed later. You can touch these
-        ".git/commit-timestamp" files in your post-commit script, for
-        example. This allows sorting recently committed repos more cheaply
-        (compared to doing "git log -1").
+        "commit-timestamp" (and C&lt;-commit-timestamp>) compares the
+        timestamp of C&lt;.git/commit-timestamp> file in each repo. Repos or
+        dirs not having this file will be processed later. You can touch
+        these C&lt;.git/commit-timestamp> files in your post-commit script,
+        for example. This allows sorting recently committed repos more
+        cheaply (compared to doing "git log -1").
 
     *   source* => *str*
 
@@ -192,6 +194,8 @@ FUNCTIONS
     element (result) is optional, the actual result. Fourth element (meta)
     is called result metadata and is optional, a hash that contains extra
     information.
+
+     (any)
 
   sync_bunch(%args) -> [status, msg, result, meta]
     Synchronize bunch to another bunch.
@@ -294,12 +298,12 @@ FUNCTIONS
 
         Order entries in bunch.
 
-        "commit-timestamp" (and "-commit-timestamp") compares the timestamp
-        of ".git/commit-timestamp" file in each repo. Repos or dirs not
-        having this file will be processed later. You can touch these
-        ".git/commit-timestamp" files in your post-commit script, for
-        example. This allows sorting recently committed repos more cheaply
-        (compared to doing "git log -1").
+        "commit-timestamp" (and C&lt;-commit-timestamp>) compares the
+        timestamp of C&lt;.git/commit-timestamp> file in each repo. Repos or
+        dirs not having this file will be processed later. You can touch
+        these C&lt;.git/commit-timestamp> files in your post-commit script,
+        for example. This allows sorting recently committed repos more
+        cheaply (compared to doing "git log -1").
 
     *   source* => *str*
 
@@ -319,6 +323,8 @@ FUNCTIONS
     element (result) is optional, the actual result. Fourth element (meta)
     is called result metadata and is optional, a hash that contains extra
     information.
+
+     (any)
 
 FAQ
 TODO
