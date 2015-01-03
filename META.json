@@ -10,7 +10,7 @@
    ],
    "meta-spec" : {
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
-      "version" : 2
+      "version" : "2"
    },
    "name" : "Git-Bunch",
    "prereqs" : {
@@ -66,10 +66,10 @@
          "web" : "https://github.com/sharyanto/perl-Git-Bunch"
       }
    },
-   "version" : "0.41",
+   "version" : "0.42",
    "x_Dist_Zilla" : {
       "perl" : {
-         "version" : "5.018002"
+         "version" : "5.018001"
       },
       "plugins" : [
          {
@@ -388,7 +388,7 @@
          {
             "class" : "Dist::Zilla::Plugin::PERLANCAR::GenTodoMd",
             "name" : "@Author::PERLANCAR/PERLANCAR::GenTodoMd",
-            "version" : "0.01"
+            "version" : "0.02"
          },
          {
             "class" : "Dist::Zilla::Plugin::Prereqs",

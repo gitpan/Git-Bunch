@@ -35,10 +35,10 @@ resources:
   bugtracker: https://rt.cpan.org/Public/Dist/Display.html?Name=Git-Bunch
   homepage: https://metacpan.org/release/Git-Bunch
   repository: git://github.com/sharyanto/perl-Git-Bunch.git
-version: '0.41'
+version: '0.42'
 x_Dist_Zilla:
   perl:
-    version: '5.018002'
+    version: '5.018001'
   plugins:
     -
       class: Dist::Zilla::Plugin::GatherDir
@@ -290,7 +290,7 @@ x_Dist_Zilla:
     -
       class: Dist::Zilla::Plugin::PERLANCAR::GenTodoMd
       name: '@Author::PERLANCAR/PERLANCAR::GenTodoMd'
-      version: '0.01'
+      version: '0.02'
     -
       class: Dist::Zilla::Plugin::Prereqs
       config:
