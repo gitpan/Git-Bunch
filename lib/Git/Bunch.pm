@@ -1,5 +1,8 @@
 package Git::Bunch;
 
+our $DATE = '2015-01-03'; # DATE
+our $VERSION = '0.41'; # VERSION
+
 use 5.010001;
 use strict;
 use warnings;
@@ -15,9 +18,6 @@ use String::ShellQuote;
 require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(check_bunch sync_bunch exec_bunch);
-
-our $VERSION = '0.40'; # VERSION
-our $DATE = '2014-08-24'; # DATE
 
 our %SPEC;
 
@@ -81,6 +81,13 @@ This only applies to and `sync_bunch` operations. Operations like `check_bunch`
 and `exec_bunch` already ignore these and only operate on git repos.
 
 _
+        cmdline_aliases => {
+            include_non_git_dirs => {
+                summary => 'Alias for --no-exclude-non-git-dirs',
+                schema  => ['bool*', is=>1],
+                code    => sub { $_[0]{exclude_non_git_dirs} = 0 },
+            },
+        },
     },
     exclude_files    => {
         summary      => 'Exclude files from processing',
@@ -91,6 +98,13 @@ This only applies to `sync_bunch` operations. Operations like `check_bunch` and
 `exec_bunch` already ignore these and only operate on git repos.
 
 _
+        cmdline_aliases => {
+            include_files => {
+                summary => 'Alias for --no-exclude-files',
+                schema  => ['bool*', is=>1],
+                code    => sub { $_[0]{exclude_non_git_dirs} = 0 },
+            },
+        },
     },
     exclude_repos_pat=> {
         summary      => 'Specify regex pattern of repos to exclude',
@@ -819,7 +833,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-This document describes version 0.40 of Git::Bunch (from Perl distribution Git-Bunch), released on 2014-08-24.
+This document describes version 0.41 of Git::Bunch (from Perl distribution Git-Bunch), released on 2015-01-03.
 
 =head1 SYNOPSIS
 
@@ -890,7 +904,7 @@ Exclude non-git dirs from processing.
 This only applies to and C<sync_bunch> operations. Operations like C<check_bunch>
 and C<exec_bunch> already ignore these and only operate on git repos.
 
-=item * B<exclude_repos> => I<array>
+=item * B<exclude_repos> => I<array[str]>
 
 Exclude some repos from processing.
 
@@ -898,7 +912,7 @@ Exclude some repos from processing.
 
 Specify regex pattern of repos to exclude.
 
-=item * B<include_repos> => I<array>
+=item * B<include_repos> => I<array[str]>
 
 Specific git repos to sync, if not specified all repos in the bunch will be processed.
 
@@ -914,9 +928,9 @@ Only process a single repo.
 
 Order entries in bunch.
 
-C<commit-timestamp> (and C&lt;-commit-timestamp>) compares the timestamp of
-C&lt;.git/commit-timestamp> file in each repo. Repos or dirs not having this file
-will be processed later. You can touch these C&lt;.git/commit-timestamp> files in
+C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
+C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
+will be processed later. You can touch these C<.git/commit-timestamp> files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing C<git log -1>).
 
@@ -925,8 +939,6 @@ repos more cheaply (compared to doing C<git log -1>).
 Directory to check.
 
 =back
-
-Return value:
 
 Returns an enveloped result (an array).
 
@@ -937,8 +949,7 @@ First element (status) is an integer containing HTTP status code
 element (meta) is called result metadata and is optional, a hash
 that contains extra information.
 
- (any)
-
+Return value:  (any)
 
 =head2 exec_bunch(%args) -> [status, msg, result, meta]
 
@@ -969,7 +980,7 @@ Exclude non-git dirs from processing.
 This only applies to and C<sync_bunch> operations. Operations like C<check_bunch>
 and C<exec_bunch> already ignore these and only operate on git repos.
 
-=item * B<exclude_repos> => I<array>
+=item * B<exclude_repos> => I<array[str]>
 
 Exclude some repos from processing.
 
@@ -977,7 +988,7 @@ Exclude some repos from processing.
 
 Specify regex pattern of repos to exclude.
 
-=item * B<include_repos> => I<array>
+=item * B<include_repos> => I<array[str]>
 
 Specific git repos to sync, if not specified all repos in the bunch will be processed.
 
@@ -993,9 +1004,9 @@ Only process a single repo.
 
 Order entries in bunch.
 
-C<commit-timestamp> (and C&lt;-commit-timestamp>) compares the timestamp of
-C&lt;.git/commit-timestamp> file in each repo. Repos or dirs not having this file
-will be processed later. You can touch these C&lt;.git/commit-timestamp> files in
+C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
+C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
+will be processed later. You can touch these C<.git/commit-timestamp> files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing C<git log -1>).
 
@@ -1004,8 +1015,6 @@ repos more cheaply (compared to doing C<git log -1>).
 Directory to check.
 
 =back
-
-Return value:
 
 Returns an enveloped result (an array).
 
@@ -1016,8 +1025,7 @@ First element (status) is an integer containing HTTP status code
 element (meta) is called result metadata and is optional, a hash
 that contains extra information.
 
- (any)
-
+Return value:  (any)
 
 =head2 sync_bunch(%args) -> [status, msg, result, meta]
 
@@ -1082,7 +1090,7 @@ Exclude non-git dirs from processing.
 This only applies to and C<sync_bunch> operations. Operations like C<check_bunch>
 and C<exec_bunch> already ignore these and only operate on git repos.
 
-=item * B<exclude_repos> => I<array>
+=item * B<exclude_repos> => I<array[str]>
 
 Exclude some repos from processing.
 
@@ -1090,7 +1098,7 @@ Exclude some repos from processing.
 
 Specify regex pattern of repos to exclude.
 
-=item * B<include_repos> => I<array>
+=item * B<include_repos> => I<array[str]>
 
 Specific git repos to sync, if not specified all repos in the bunch will be processed.
 
@@ -1115,9 +1123,9 @@ are not owned by root), turn this option on.
 
 Order entries in bunch.
 
-C<commit-timestamp> (and C&lt;-commit-timestamp>) compares the timestamp of
-C&lt;.git/commit-timestamp> file in each repo. Repos or dirs not having this file
-will be processed later. You can touch these C&lt;.git/commit-timestamp> files in
+C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
+C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
+will be processed later. You can touch these C<.git/commit-timestamp> files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing C<git log -1>).
 
@@ -1131,8 +1139,6 @@ Destination bunch.
 
 =back
 
-Return value:
-
 Returns an enveloped result (an array).
 
 First element (status) is an integer containing HTTP status code
@@ -1142,22 +1148,8 @@ First element (status) is an integer containing HTTP status code
 element (meta) is called result metadata and is optional, a hash
 that contains extra information.
 
- (any)
-
+Return value:  (any)
 =head1 FAQ
-
-=head1 TODO
-
-=over 4
-
-=item * Can't handle bare source repos
-
-=item * Sync-ing to bare repos (e.g. with --backup) still produces error messages
-
-Although the sync process succeeds, the error messages (like C<< fatal: Not a
-git repository >>) might be confusing.
-
-=back
 
 =head1 SEE ALSO
 
@@ -1190,11 +1182,11 @@ feature.
 
 =head1 AUTHOR
 
-Steven Haryanto <stevenharyanto@gmail.com>
+perlancar <perlancar@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2014 by Steven Haryanto.
+This software is copyright (c) 2015 by perlancar@cpan.org.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
