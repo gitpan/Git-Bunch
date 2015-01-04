@@ -21,9 +21,9 @@ meta-spec:
   version: '1.4'
 name: Git-Bunch
 requires:
-  Builtin::Logged: '0'
   Capture::Tiny: '0'
   File::chdir: '0'
+  IPC::System::Locale: '0.02'
   Log::Any: '0'
   Perinci::CmdLine: '1.19'
   Rinci: v1.1.14
@@ -35,10 +35,10 @@ resources:
   bugtracker: https://rt.cpan.org/Public/Dist/Display.html?Name=Git-Bunch
   homepage: https://metacpan.org/release/Git-Bunch
   repository: git://github.com/sharyanto/perl-Git-Bunch.git
-version: '0.42'
+version: '0.43'
 x_Dist_Zilla:
   perl:
-    version: '5.018001'
+    version: '5.018002'
   plugins:
     -
       class: Dist::Zilla::Plugin::GatherDir

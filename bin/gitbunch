@@ -4,7 +4,7 @@ use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.42'; # VERSION
+our $VERSION = '0.43'; # VERSION
 
 use Perinci::CmdLine;
 Perinci::CmdLine->new(
@@ -32,7 +32,7 @@ gitbunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-This document describes version 0.42 of gitbunch (from Perl distribution Git-Bunch), released on 2015-01-03.
+This document describes version 0.43 of gitbunch (from Perl distribution Git-Bunch), released on 2015-01-04.
 
 =head1 DESCRIPTION
 
@@ -87,33 +87,33 @@ C<*> marks required options.
 
 =item B<--config-path>=I<s>
 
-Set path to configuration file.
+{en_US Set path to configuration file}.
 
 Can be specified multiple times.
 
 =item B<--config-profile>=I<s>
 
-Set configuration profile to use.
+{en_US Set configuration profile to use}.
 
 =item B<--format-options>=I<s>
 
-Pass options to formatter.
+{en_US Pass options to formatter}.
 
 =item B<--format>=I<s>
 
-Choose output format, e.g. json, text.
+{en_US Choose output format, e.g. json, text}.
 
 =item B<--help>, B<-h>, B<-?>
 
-Display this help message.
+{en_US Display this help message}.
 
 =item B<--no-config>
 
-Do not use any configuration file.
+{en_US Do not use any configuration file}.
 
 =item B<--subcommands>
 
-List available subcommands.
+{en_US List available subcommands}.
 
 =item B<--version>, B<-v>
 
@@ -125,83 +125,87 @@ List available subcommands.
 
 =item B<--exclude-files>
 
-Exclude files from processing.
+{en_US Exclude files from processing}.
 
+{en_US 
 This only applies to `sync_bunch` operations. Operations like `check_bunch` and
 `exec_bunch` already ignore these and only operate on git repos.
+}
 
 
 =item B<--exclude-non-git-dirs>
 
-Exclude non-git dirs from processing.
+{en_US Exclude non-git dirs from processing}.
 
+{en_US 
 This only applies to and `sync_bunch` operations. Operations like `check_bunch`
 and `exec_bunch` already ignore these and only operate on git repos.
+}
 
 
 =item B<--exclude-repos-json>=I<s>
 
-Exclude some repos from processing (JSON-encoded).
+{en_US Exclude some repos from processing} (JSON-encoded).
 
 See C<--exclude-repos>.
 
 =item B<--exclude-repos-pat>=I<s>
 
-Specify regex pattern of repos to exclude.
+{en_US Specify regex pattern of repos to exclude}.
 
 =item B<--exclude-repos-yaml>=I<s>
 
-Exclude some repos from processing (YAML-encoded).
+{en_US Exclude some repos from processing} (YAML-encoded).
 
 See C<--exclude-repos>.
 
 =item B<--exclude-repos>=I<s@>
 
-Exclude some repos from processing.
+{en_US Exclude some repos from processing}.
 
 Can be specified multiple times.
 
 =item B<--include-files>
 
-Alias for --no-exclude-files.
+{en_US Alias for --no-exclude-files}.
 
 See C<--exclude-files>.
 
 =item B<--include-non-git-dirs>
 
-Alias for --no-exclude-non-git-dirs.
+{en_US Alias for --no-exclude-non-git-dirs}.
 
 See C<--exclude-non-git-dirs>.
 
 =item B<--include-repos-json>=I<s>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed (JSON-encoded).
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed} (JSON-encoded).
 
 See C<--include-repos>.
 
 =item B<--include-repos-pat>=I<s>
 
-Specify regex pattern of repos to include.
+{en_US Specify regex pattern of repos to include}.
 
 =item B<--include-repos-yaml>=I<s>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed (YAML-encoded).
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed} (YAML-encoded).
 
 See C<--include-repos>.
 
 =item B<--include-repos>=I<s@>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed}.
 
 Can be specified multiple times.
 
 =item B<--repo>=I<s>
 
-Only process a single repo.
+{en_US Only process a single repo}.
 
 =item B<--sort>=I<s>
 
-Order entries in bunch.
+{en_US Order entries in bunch}.
 
 Default value:
 
@@ -211,16 +215,18 @@ Valid values:
 
  ["name", "-name", "mtime", "-mtime", "rand", "commit-timestamp", "-commit-timestamp"]
 
+{en_US 
 `commit-timestamp` (and `-commit-timestamp`) compares the timestamp of
 `.git/commit-timestamp` file in each repo. Repos or dirs not having this file
 will be processed later. You can touch these `.git/commit-timestamp` files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing `git log -1`).
+}
 
 
 =item B<--source>=I<s>*
 
-Directory to check.
+{en_US Directory to check}.
 
 =back
 
@@ -230,87 +236,91 @@ Directory to check.
 
 =item B<--command>=I<s>*
 
-Command to execute.
+{en_US Command to execute}.
 
 =item B<--exclude-files>
 
-Exclude files from processing.
+{en_US Exclude files from processing}.
 
+{en_US 
 This only applies to `sync_bunch` operations. Operations like `check_bunch` and
 `exec_bunch` already ignore these and only operate on git repos.
+}
 
 
 =item B<--exclude-non-git-dirs>
 
-Exclude non-git dirs from processing.
+{en_US Exclude non-git dirs from processing}.
 
+{en_US 
 This only applies to and `sync_bunch` operations. Operations like `check_bunch`
 and `exec_bunch` already ignore these and only operate on git repos.
+}
 
 
 =item B<--exclude-repos-json>=I<s>
 
-Exclude some repos from processing (JSON-encoded).
+{en_US Exclude some repos from processing} (JSON-encoded).
 
 See C<--exclude-repos>.
 
 =item B<--exclude-repos-pat>=I<s>
 
-Specify regex pattern of repos to exclude.
+{en_US Specify regex pattern of repos to exclude}.
 
 =item B<--exclude-repos-yaml>=I<s>
 
-Exclude some repos from processing (YAML-encoded).
+{en_US Exclude some repos from processing} (YAML-encoded).
 
 See C<--exclude-repos>.
 
 =item B<--exclude-repos>=I<s@>
 
-Exclude some repos from processing.
+{en_US Exclude some repos from processing}.
 
 Can be specified multiple times.
 
 =item B<--include-files>
 
-Alias for --no-exclude-files.
+{en_US Alias for --no-exclude-files}.
 
 See C<--exclude-files>.
 
 =item B<--include-non-git-dirs>
 
-Alias for --no-exclude-non-git-dirs.
+{en_US Alias for --no-exclude-non-git-dirs}.
 
 See C<--exclude-non-git-dirs>.
 
 =item B<--include-repos-json>=I<s>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed (JSON-encoded).
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed} (JSON-encoded).
 
 See C<--include-repos>.
 
 =item B<--include-repos-pat>=I<s>
 
-Specify regex pattern of repos to include.
+{en_US Specify regex pattern of repos to include}.
 
 =item B<--include-repos-yaml>=I<s>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed (YAML-encoded).
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed} (YAML-encoded).
 
 See C<--include-repos>.
 
 =item B<--include-repos>=I<s@>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed}.
 
 Can be specified multiple times.
 
 =item B<--repo>=I<s>
 
-Only process a single repo.
+{en_US Only process a single repo}.
 
 =item B<--sort>=I<s>
 
-Order entries in bunch.
+{en_US Order entries in bunch}.
 
 Default value:
 
@@ -320,16 +330,18 @@ Valid values:
 
  ["name", "-name", "mtime", "-mtime", "rand", "commit-timestamp", "-commit-timestamp"]
 
+{en_US 
 `commit-timestamp` (and `-commit-timestamp`) compares the timestamp of
 `.git/commit-timestamp` file in each repo. Repos or dirs not having this file
 will be processed later. You can touch these `.git/commit-timestamp` files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing `git log -1`).
+}
 
 
 =item B<--source>=I<s>*
 
-Directory to check.
+{en_US Directory to check}.
 
 =back
 
@@ -339,8 +351,9 @@ Directory to check.
 
 =item B<--backup>
 
-Whether doing backup to target.
+{en_US Whether doing backup to target}.
 
+{en_US 
 This setting lets you express that you want to perform synchronizing to a backup
 target, and that you do not do work on the target. Thus, you do not care about
 uncommitted or untracked files/dirs in the target repos (might happen if you
@@ -349,12 +362,14 @@ is turned on, the function will first do a `git clean -f -d` (to delete
 untracked files/dirs) and then `git checkout .` (to discard all uncommitted
 changes). This setting will also implicitly turn on `create_bare` setting
 (unless that setting has been explicitly enabled/disabled).
+}
 
 
 =item B<--create-bare-target>, B<--use-bare>
 
-Whether to create bare git repo when target does not exist.
+{en_US Whether to create bare git repo when target does not exist}.
 
+{en_US 
 When target repo does not exist, gitbunch can either copy the source repo using
 `rsync` (the default, if this setting is undefined), or it can create target
 repo with `git init --bare` (if this setting is set to 1), or it can create
@@ -367,101 +382,108 @@ Creating bare repos are apt for backup purposes since they are more
 space-efficient.
 
 Non-repos will still be copied/rsync-ed.
+}
 
 
 =item B<--delete-branch>
 
-Whether to delete branches in dest repos not existing in source repos.
+{en_US Whether to delete branches in dest repos not existing in source repos}.
 
 =item B<--exclude-files>
 
-Exclude files from processing.
+{en_US Exclude files from processing}.
 
+{en_US 
 This only applies to `sync_bunch` operations. Operations like `check_bunch` and
 `exec_bunch` already ignore these and only operate on git repos.
+}
 
 
 =item B<--exclude-non-git-dirs>
 
-Exclude non-git dirs from processing.
+{en_US Exclude non-git dirs from processing}.
 
+{en_US 
 This only applies to and `sync_bunch` operations. Operations like `check_bunch`
 and `exec_bunch` already ignore these and only operate on git repos.
+}
 
 
 =item B<--exclude-repos-json>=I<s>
 
-Exclude some repos from processing (JSON-encoded).
+{en_US Exclude some repos from processing} (JSON-encoded).
 
 See C<--exclude-repos>.
 
 =item B<--exclude-repos-pat>=I<s>
 
-Specify regex pattern of repos to exclude.
+{en_US Specify regex pattern of repos to exclude}.
 
 =item B<--exclude-repos-yaml>=I<s>
 
-Exclude some repos from processing (YAML-encoded).
+{en_US Exclude some repos from processing} (YAML-encoded).
 
 See C<--exclude-repos>.
 
 =item B<--exclude-repos>=I<s@>
 
-Exclude some repos from processing.
+{en_US Exclude some repos from processing}.
 
 Can be specified multiple times.
 
 =item B<--include-files>
 
-Alias for --no-exclude-files.
+{en_US Alias for --no-exclude-files}.
 
 See C<--exclude-files>.
 
 =item B<--include-non-git-dirs>
 
-Alias for --no-exclude-non-git-dirs.
+{en_US Alias for --no-exclude-non-git-dirs}.
 
 See C<--exclude-non-git-dirs>.
 
 =item B<--include-repos-json>=I<s>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed (JSON-encoded).
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed} (JSON-encoded).
 
 See C<--include-repos>.
 
 =item B<--include-repos-pat>=I<s>
 
-Specify regex pattern of repos to include.
+{en_US Specify regex pattern of repos to include}.
 
 =item B<--include-repos-yaml>=I<s>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed (YAML-encoded).
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed} (YAML-encoded).
 
 See C<--include-repos>.
 
 =item B<--include-repos>=I<s@>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed}.
 
 Can be specified multiple times.
 
 =item B<--repo>=I<s>
 
-Only process a single repo.
+{en_US Only process a single repo}.
 
 =item B<--rsync-opt-maintain-ownership>
 
-Whether or not, when rsync-ing from source, we use -a (= -rlptgoD) or -rlptD (-a minus -go).
+{en_US Whether or not, when rsync-ing from source, we use -a (= -rlptgoD) or -rlptD (-a minus -go)}.
 
+{en_US 
 Sometimes using -a results in failure to preserve permission modes on
 sshfs-mounted filesystem, while -rlptD succeeds, so by default we don't maintain
 ownership. If you need to maintain ownership (e.g. you run as root and the repos
 are not owned by root), turn this option on.
+}
 
 
 =item B<--sort>=I<s>
 
-Order entries in bunch.
+{en_US Order entries in bunch}.
 
 Default value:
 
@@ -471,20 +493,22 @@ Valid values:
 
  ["name", "-name", "mtime", "-mtime", "rand", "commit-timestamp", "-commit-timestamp"]
 
+{en_US 
 `commit-timestamp` (and `-commit-timestamp`) compares the timestamp of
 `.git/commit-timestamp` file in each repo. Repos or dirs not having this file
 will be processed later. You can touch these `.git/commit-timestamp` files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing `git log -1`).
+}
 
 
 =item B<--source>=I<s>*
 
-Directory to check.
+{en_US Directory to check}.
 
 =item B<--target>=I<s>*
 
-Destination bunch.
+{en_US Destination bunch}.
 
 =back
 

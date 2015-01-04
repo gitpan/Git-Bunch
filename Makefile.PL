@@ -24,9 +24,9 @@ my %WriteMakefileArgs = (
   "MIN_PERL_VERSION" => "5.010001",
   "NAME" => "Git::Bunch",
   "PREREQ_PM" => {
-    "Builtin::Logged" => 0,
     "Capture::Tiny" => 0,
     "File::chdir" => 0,
+    "IPC::System::Locale" => "0.02",
     "Log::Any" => 0,
     "Perinci::CmdLine" => "1.19",
     "Rinci" => "1.1.14",
@@ -43,7 +43,7 @@ my %WriteMakefileArgs = (
     "Probe::Perl" => 0,
     "Test::More" => "0.96"
   },
-  "VERSION" => "0.42",
+  "VERSION" => "0.43",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -51,7 +51,6 @@ my %WriteMakefileArgs = (
 
 
 my %FallbackPrereqs = (
-  "Builtin::Logged" => 0,
   "Capture::Tiny" => 0,
   "ExtUtils::MakeMaker" => 0,
   "File::Slurp::Tiny" => 0,
@@ -60,6 +59,7 @@ my %FallbackPrereqs = (
   "File::chdir" => 0,
   "IO::Handle" => 0,
   "IPC::Open3" => 0,
+  "IPC::System::Locale" => "0.02",
   "Log::Any" => 0,
   "Perinci::CmdLine" => "1.19",
   "Perl::osnames" => "0.09",

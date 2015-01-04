@@ -1,7 +1,7 @@
 package Git::Bunch;
 
-our $DATE = '2015-01-03'; # DATE
-our $VERSION = '0.42'; # VERSION
+our $DATE = '2015-01-04'; # DATE
+our $VERSION = '0.43'; # VERSION
 
 use 5.010001;
 use strict;
@@ -9,7 +9,7 @@ use warnings;
 use experimental 'smartmatch';
 use Log::Any '$log';
 
-use Builtin::Logged qw(system my_qx);
+use IPC::System::Locale qw(system backtick);
 use Cwd ();
 use File::chdir;
 use File::Path qw(make_path);
@@ -325,7 +325,7 @@ sub check_bunch {
                               "Checking repo $repo ...")
             if $progress;
 
-        my $output = `LANG=C git status 2>&1`;
+        my $output = backtick("git status 2>&1");
         my $exit = $? >> 8;
         if ($exit == 0 && $output =~ /nothing to commit/) {
             $log->info("$repo is clean");
@@ -377,7 +377,7 @@ sub _sync_repo {
     my %dest_heads; # last revisions for each branch
 
     local $CWD = "$src/$repo";
-    @src_branches = map {(/^[* ] (.+)/, $1)[-1]} my_qx("LANG=C git branch");
+    @src_branches = map {(/^[* ] (.+)/, $1)[-1]} backtick("git branch");
     $exit = $? >> 8;
     if ($exit) {
         $log->error("Can't list branches on src repo $src/$repo: $exit");
@@ -386,7 +386,7 @@ sub _sync_repo {
     $log->debugf("Source branches: %s", \@src_branches);
 
     for my $branch (@src_branches) {
-        my $output = my_qx("LANG=C git log -1 '$branch'");
+        my $output = backtick("git log -1 '$branch'");
         $exit = $? >> 8;
         if ($exit) {
             $log->error("Can't find out head for branch $branch on src repo ".
@@ -404,14 +404,14 @@ sub _sync_repo {
 
     $CWD = "$dest/$repo";
     my $is_bare = _is_repo(".") == 2;
-    @dest_branches = map {(/^[* ] (.+)/, $1)[-1]} my_qx("LANG=C git branch");
+    @dest_branches = map {(/^[* ] (.+)/, $1)[-1]} backtick("git branch");
     if ($exit) {
         $log->error("Can't list branches on dest repo $repo: $exit");
         return [500, "Can't list branches on dest: $exit"];
     }
     $log->debugf("Dest branches: %s", \@dest_branches);
     for my $branch (@dest_branches) {
-        my $output = my_qx("LANG=C git log -1 '$branch'");
+        my $output = backtick("git log -1 '$branch'");
         $exit = $? >> 8;
         if ($exit) {
             $log->error("Can't find out head for branch $branch on dest repo ".
@@ -448,18 +448,18 @@ sub _sync_repo {
         $log->info("Updating branch $branch of repo $repo ...")
             if @src_branches > 1;
         if ($is_bare) {
-            $output = my_qx(
+            $output = backtick(
                 join("",
                      "cd '$src/$repo'; ",
-                     "LANG=C git push '$dest/$repo' '$branch' 2>&1",
+                     "git push '$dest/$repo' '$branch' 2>&1",
                  ));
         } else {
-            $output = my_qx(
+            $output = backtick(
                 join("",
                      "cd '$dest/$repo'; ",
-                     ($branch ~~ @dest_branches ? "":"LANG=C git branch '$branch'; "),
-                     "LANG=C git checkout '$branch' 2>/dev/null; ",
-                     "LANG=C git pull '$src/$repo' '$branch' 2>&1"
+                     ($branch ~~ @dest_branches ? "":"git branch '$branch'; "),
+                     "git checkout '$branch' 2>/dev/null; ",
+                     "git pull '$src/$repo' '$branch' 2>&1"
                  ));
         }
         $exit = $? >> 8;
@@ -489,8 +489,8 @@ sub _sync_repo {
         $log->debug("Result of 'git pull/push' for branch $branch of repo ".
                         "$repo: exit=$exit, output=$output");
 
-        $output = my_qx("cd '$dest/$repo'; ".
-                            "LANG=C git fetch --tags '$src/$repo' 2>&1");
+        $output = backtick("cd '$dest/$repo'; ".
+                               "git fetch --tags '$src/$repo' 2>&1");
         $exit = $? >> 8;
         if ($exit != 0) {
             $log->debug("Failed fetching tags: ".
@@ -506,8 +506,8 @@ sub _sync_repo {
             $changed_branch++;
             $log->info("Deleting branch $branch of repo $repo because ".
                            "it no longer exists in src ...");
-            system("cd '$dest/$repo' && LANG=C git checkout master 2>/dev/null && ".
-                       "LANG=C git branch -D '$branch' 2>/dev/null");
+            system("cd '$dest/$repo' && git checkout master 2>/dev/null && ".
+                       "git branch -D '$branch' 2>/dev/null");
             $exit = $? >> 8;
             $log->error("Failed deleting branch $branch of repo $repo: $exit")
                 if $exit;
@@ -670,7 +670,7 @@ sub sync_bunch {
             # target, we use /^deleting /x
             my $uuid = UUID::Random::generate();
             my $v = $log->is_debug ? "-v" : "";
-            $cmd = "LANG=C rsync --log-format=$uuid -${a}z $v --del --force ".
+            $cmd = "rsync --log-format=$uuid -${a}z $v --del --force ".
                 shell_quote("$source/$e")." .";
             my ($stdout, @result) = Capture::Tiny::capture_stdout(
                 sub { system($cmd) });
@@ -691,12 +691,12 @@ sub sync_bunch {
             if ($create_bare) {
                 $log->info("Initializing target repo $e (bare) ...");
                 $cmd = "mkdir ".shell_quote($e)." && cd ".shell_quote($e).
-                    " && LANG=C git init --bare";
+                    " && git init --bare";
                 system($cmd);
                 $exit = $? >> 8;
                 if ($exit) {
                     $log->warn("Git init failed, please check: $exit");
-                    $res{$e} = [500, "LANG=C git init --bare failed: $exit"];
+                    $res{$e} = [500, "git init --bare failed: $exit"];
                     next ENTRY;
                 }
                 $created++;
@@ -704,7 +704,7 @@ sub sync_bunch {
             } elsif (defined $create_bare) {
                 $log->info("Initializing target repo $e (non-bare) ...");
                 $cmd = "mkdir ".shell_quote($e)." && cd ".shell_quote($e).
-                    " && LANG=C git init";
+                    " && git init";
                 system($cmd);
                 $exit = $? >> 8;
                 if ($exit) {
@@ -737,7 +737,7 @@ sub sync_bunch {
         if ($backup && !$created) {
             $log->debug("Discarding changes in target repo $e ...");
             local $CWD = $e;
-            system "LANG=C git clean -f -d && LANG=C git checkout .";
+            system "git clean -f -d && git checkout .";
             # ignore error for now, let's go ahead and sync anyway
         }
 
@@ -833,7 +833,7 @@ Git::Bunch - Manage gitbunch directory (directory which contain git repos)
 
 =head1 VERSION
 
-This document describes version 0.42 of Git::Bunch (from Perl distribution Git-Bunch), released on 2015-01-03.
+This document describes version 0.43 of Git::Bunch (from Perl distribution Git-Bunch), released on 2015-01-04.
 
 =head1 SYNOPSIS
 
@@ -874,178 +874,197 @@ this.
 
 See also L<File::RsyBak>, which I wrote to backup everything else.
 
-=head1 FUNCTIONS
+=head1 FUNGSI
 
 
 =head2 check_bunch(%args) -> [status, msg, result, meta]
 
-Check status of git repositories inside gitbunch directory.
+{en_US Check status of git repositories inside gitbunch directory}.
 
+{en_US 
 Will perform a 'git status' for each git repositories inside the bunch and
 report which repositories are clean/unclean.
 
 Will die if can't chdir into bunch or git repository.
+}
 
-Arguments ('*' denotes required arguments):
+Argumen ('*' menandakan argumen wajib):
 
 =over 4
 
 =item * B<exclude_files> => I<bool>
 
-Exclude files from processing.
+{en_US Exclude files from processing}.
 
+{en_US 
 This only applies to C<sync_bunch> operations. Operations like C<check_bunch> and
 C<exec_bunch> already ignore these and only operate on git repos.
+}
 
 =item * B<exclude_non_git_dirs> => I<bool>
 
-Exclude non-git dirs from processing.
+{en_US Exclude non-git dirs from processing}.
 
+{en_US 
 This only applies to and C<sync_bunch> operations. Operations like C<check_bunch>
 and C<exec_bunch> already ignore these and only operate on git repos.
+}
 
 =item * B<exclude_repos> => I<array[str]>
 
-Exclude some repos from processing.
+{en_US Exclude some repos from processing}.
 
 =item * B<exclude_repos_pat> => I<str>
 
-Specify regex pattern of repos to exclude.
+{en_US Specify regex pattern of repos to exclude}.
 
 =item * B<include_repos> => I<array[str]>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed}.
 
 =item * B<include_repos_pat> => I<str>
 
-Specify regex pattern of repos to include.
+{en_US Specify regex pattern of repos to include}.
 
 =item * B<repo> => I<str>
 
-Only process a single repo.
+{en_US Only process a single repo}.
 
-=item * B<sort> => I<str> (default: "-commit-timestamp")
+=item * B<sort> => I<str> (bawaan: "-commit-timestamp")
 
-Order entries in bunch.
+{en_US Order entries in bunch}.
 
+{en_US 
 C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
 C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
 will be processed later. You can touch these C<.git/commit-timestamp> files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing C<git log -1>).
+}
 
 =item * B<source>* => I<str>
 
-Directory to check.
+{en_US Directory to check}.
 
 =back
 
-Returns an enveloped result (an array).
+Mengembalikan hasil terbungkus (larik).
 
-First element (status) is an integer containing HTTP status code
-(200 means OK, 4xx caller error, 5xx function error). Second element
-(msg) is a string containing error message, or 'OK' if status is
-200. Third element (result) is optional, the actual result. Fourth
-element (meta) is called result metadata and is optional, a hash
-that contains extra information.
+Elemen pertama (status) adalah bilangan bulat berisi kode status HTTP
+(200 berarti OK, 4xx kesalahan di pemanggil, 5xx kesalahan di fungsi). Elemen kedua
+(msg) adalah string berisi pesan kesalahan, atau 'OK' jika status
+200. Elemen ketiga (result) bersifat opsional, berisi hasil yang diinginkan. Elemen keempat
+(meta) disebut metadata hasil, bersifat opsional, berupa hash
+informasi tambahan.
 
-Return value:  (any)
+Nilai kembali:  (any)
 
 =head2 exec_bunch(%args) -> [status, msg, result, meta]
 
-Execute a command for each repo in the bunch.
+{en_US Execute a command for each repo in the bunch}.
 
+{en_US 
 For each git repository in the bunch, will chdir to it and execute specified
 command.
+}
 
-Arguments ('*' denotes required arguments):
+Argumen ('*' menandakan argumen wajib):
 
 =over 4
 
 =item * B<command>* => I<str>
 
-Command to execute.
+{en_US Command to execute}.
 
 =item * B<exclude_files> => I<bool>
 
-Exclude files from processing.
+{en_US Exclude files from processing}.
 
+{en_US 
 This only applies to C<sync_bunch> operations. Operations like C<check_bunch> and
 C<exec_bunch> already ignore these and only operate on git repos.
+}
 
 =item * B<exclude_non_git_dirs> => I<bool>
 
-Exclude non-git dirs from processing.
+{en_US Exclude non-git dirs from processing}.
 
+{en_US 
 This only applies to and C<sync_bunch> operations. Operations like C<check_bunch>
 and C<exec_bunch> already ignore these and only operate on git repos.
+}
 
 =item * B<exclude_repos> => I<array[str]>
 
-Exclude some repos from processing.
+{en_US Exclude some repos from processing}.
 
 =item * B<exclude_repos_pat> => I<str>
 
-Specify regex pattern of repos to exclude.
+{en_US Specify regex pattern of repos to exclude}.
 
 =item * B<include_repos> => I<array[str]>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed}.
 
 =item * B<include_repos_pat> => I<str>
 
-Specify regex pattern of repos to include.
+{en_US Specify regex pattern of repos to include}.
 
 =item * B<repo> => I<str>
 
-Only process a single repo.
+{en_US Only process a single repo}.
 
-=item * B<sort> => I<str> (default: "-commit-timestamp")
+=item * B<sort> => I<str> (bawaan: "-commit-timestamp")
 
-Order entries in bunch.
+{en_US Order entries in bunch}.
 
+{en_US 
 C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
 C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
 will be processed later. You can touch these C<.git/commit-timestamp> files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing C<git log -1>).
+}
 
 =item * B<source>* => I<str>
 
-Directory to check.
+{en_US Directory to check}.
 
 =back
 
-Returns an enveloped result (an array).
+Mengembalikan hasil terbungkus (larik).
 
-First element (status) is an integer containing HTTP status code
-(200 means OK, 4xx caller error, 5xx function error). Second element
-(msg) is a string containing error message, or 'OK' if status is
-200. Third element (result) is optional, the actual result. Fourth
-element (meta) is called result metadata and is optional, a hash
-that contains extra information.
+Elemen pertama (status) adalah bilangan bulat berisi kode status HTTP
+(200 berarti OK, 4xx kesalahan di pemanggil, 5xx kesalahan di fungsi). Elemen kedua
+(msg) adalah string berisi pesan kesalahan, atau 'OK' jika status
+200. Elemen ketiga (result) bersifat opsional, berisi hasil yang diinginkan. Elemen keempat
+(meta) disebut metadata hasil, bersifat opsional, berupa hash
+informasi tambahan.
 
-Return value:  (any)
+Nilai kembali:  (any)
 
 =head2 sync_bunch(%args) -> [status, msg, result, meta]
 
-Synchronize bunch to another bunch.
+{en_US Synchronize bunch to another bunch}.
 
+{en_US 
 For each git repository in the bunch, will perform a 'git pull/push' for each
 branch. If repository in destination doesn't exist, it will be rsync-ed first
 from source. When 'git pull' fails, will exit to let you fix the problem
 manually.
 
 For all other non-git repos, will simply synchronize by one-way rsync.
+}
 
-Arguments ('*' denotes required arguments):
+Argumen ('*' menandakan argumen wajib):
 
 =over 4
 
 =item * B<backup> => I<bool>
 
-Whether doing backup to target.
+{en_US Whether doing backup to target}.
 
+{en_US 
 This setting lets you express that you want to perform synchronizing to a backup
 target, and that you do not do work on the target. Thus, you do not care about
 uncommitted or untracked files/dirs in the target repos (might happen if you
@@ -1054,11 +1073,13 @@ is turned on, the function will first do a C<git clean -f -d> (to delete
 untracked files/dirs) and then C<git checkout .> (to discard all uncommitted
 changes). This setting will also implicitly turn on C<create_bare> setting
 (unless that setting has been explicitly enabled/disabled).
+}
 
 =item * B<create_bare_target> => I<bool>
 
-Whether to create bare git repo when target does not exist.
+{en_US Whether to create bare git repo when target does not exist}.
 
+{en_US 
 When target repo does not exist, gitbunch can either copy the source repo using
 C<rsync> (the default, if this setting is undefined), or it can create target
 repo with C<git init --bare> (if this setting is set to 1), or it can create
@@ -1071,84 +1092,93 @@ Creating bare repos are apt for backup purposes since they are more
 space-efficient.
 
 Non-repos will still be copied/rsync-ed.
+}
 
-=item * B<delete_branch> => I<bool> (default: 0)
+=item * B<delete_branch> => I<bool> (bawaan: 0)
 
-Whether to delete branches in dest repos not existing in source repos.
+{en_US Whether to delete branches in dest repos not existing in source repos}.
 
 =item * B<exclude_files> => I<bool>
 
-Exclude files from processing.
+{en_US Exclude files from processing}.
 
+{en_US 
 This only applies to C<sync_bunch> operations. Operations like C<check_bunch> and
 C<exec_bunch> already ignore these and only operate on git repos.
+}
 
 =item * B<exclude_non_git_dirs> => I<bool>
 
-Exclude non-git dirs from processing.
+{en_US Exclude non-git dirs from processing}.
 
+{en_US 
 This only applies to and C<sync_bunch> operations. Operations like C<check_bunch>
 and C<exec_bunch> already ignore these and only operate on git repos.
+}
 
 =item * B<exclude_repos> => I<array[str]>
 
-Exclude some repos from processing.
+{en_US Exclude some repos from processing}.
 
 =item * B<exclude_repos_pat> => I<str>
 
-Specify regex pattern of repos to exclude.
+{en_US Specify regex pattern of repos to exclude}.
 
 =item * B<include_repos> => I<array[str]>
 
-Specific git repos to sync, if not specified all repos in the bunch will be processed.
+{en_US Specific git repos to sync, if not specified all repos in the bunch will be processed}.
 
 =item * B<include_repos_pat> => I<str>
 
-Specify regex pattern of repos to include.
+{en_US Specify regex pattern of repos to include}.
 
 =item * B<repo> => I<str>
 
-Only process a single repo.
+{en_US Only process a single repo}.
 
-=item * B<rsync_opt_maintain_ownership> => I<bool> (default: 0)
+=item * B<rsync_opt_maintain_ownership> => I<bool> (bawaan: 0)
 
-Whether or not, when rsync-ing from source, we use -a (= -rlptgoD) or -rlptD (-a minus -go).
+{en_US Whether or not, when rsync-ing from source, we use -a (= -rlptgoD) or -rlptD (-a minus -go)}.
 
+{en_US 
 Sometimes using -a results in failure to preserve permission modes on
 sshfs-mounted filesystem, while -rlptD succeeds, so by default we don't maintain
 ownership. If you need to maintain ownership (e.g. you run as root and the repos
 are not owned by root), turn this option on.
+}
 
-=item * B<sort> => I<str> (default: "-commit-timestamp")
+=item * B<sort> => I<str> (bawaan: "-commit-timestamp")
 
-Order entries in bunch.
+{en_US Order entries in bunch}.
 
+{en_US 
 C<commit-timestamp> (and C<-commit-timestamp>) compares the timestamp of
 C<.git/commit-timestamp> file in each repo. Repos or dirs not having this file
 will be processed later. You can touch these C<.git/commit-timestamp> files in
 your post-commit script, for example. This allows sorting recently committed
 repos more cheaply (compared to doing C<git log -1>).
+}
 
 =item * B<source>* => I<str>
 
-Directory to check.
+{en_US Directory to check}.
 
 =item * B<target>* => I<str>
 
-Destination bunch.
+{en_US Destination bunch}.
 
 =back
 
-Returns an enveloped result (an array).
+Mengembalikan hasil terbungkus (larik).
 
-First element (status) is an integer containing HTTP status code
-(200 means OK, 4xx caller error, 5xx function error). Second element
-(msg) is a string containing error message, or 'OK' if status is
-200. Third element (result) is optional, the actual result. Fourth
-element (meta) is called result metadata and is optional, a hash
-that contains extra information.
+Elemen pertama (status) adalah bilangan bulat berisi kode status HTTP
+(200 berarti OK, 4xx kesalahan di pemanggil, 5xx kesalahan di fungsi). Elemen kedua
+(msg) adalah string berisi pesan kesalahan, atau 'OK' jika status
+200. Elemen ketiga (result) bersifat opsional, berisi hasil yang diinginkan. Elemen keempat
+(meta) disebut metadata hasil, bersifat opsional, berupa hash
+informasi tambahan.
 
-Return value:  (any)
+Nilai kembali:  (any)
 =head1 FAQ
 
 =head1 SEE ALSO
